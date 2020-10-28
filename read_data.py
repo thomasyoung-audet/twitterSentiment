@@ -12,6 +12,8 @@ from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
 # nltk
+import nltk
+nltk.download('wordnet')
 from nltk.stem import WordNetLemmatizer
 
 # sklearn
@@ -30,7 +32,7 @@ def read():
     https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
     :return:
     """
-    DATASET_COLUMNS = ["target", "ids", "date", "flag", "user", "text"]
+    DATASET_COLUMNS = ["sentiment", "ids", "date", "flag", "user", "text"]
     DATASET_ENCODING = "ISO-8859-1"
     TRAIN_SIZE = 0.8
 
@@ -49,6 +51,10 @@ def read():
     ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
                                                    legend=False)
     ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
+    # Storing data in lists.
+    text, sentiment = list(dataset['text']), list(dataset['sentiment'])
+    fig = ax.get_figure()
+    fig.savefig('test.png')
 
     t = time.time()
     processedtext = preprocess(text)
@@ -60,9 +66,15 @@ def read():
     plt.figure(figsize=(20, 20))
     wc = WordCloud(max_words=1000, width=1600, height=800,
                    collocations=False).generate(" ".join(data_neg))
+    plt.figure(figsize=(20, 20))
     plt.imshow(wc)
-
-
+    plt.savefig('neg_wordcloud.png')
+    data_pos = processedtext[800000:]
+    wc = WordCloud(max_words=1000, width=1600, height=800,
+                   collocations=False).generate(" ".join(data_pos))
+    plt.figure(figsize=(20, 20))
+    plt.imshow(wc)
+    plt.savefig('pos_wordcloud.png')
 
 def preprocess(textdata):
     """
