@@ -1,29 +1,21 @@
 # utilities
 import re
 import os
-import pickle
-import numpy as np
 import pandas as pd
 import time
 
 # plotting
-import seaborn as sns
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
 # nltk
 import nltk
+
 nltk.download('wordnet')
 from nltk.stem import WordNetLemmatizer
 
-# sklearn
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.linear_model import LogisticRegression
-
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import confusion_matrix, classification_report
 
 
 def read():
@@ -62,19 +54,27 @@ def read():
     print(f'Time Taken: {round(time.time() - t)} seconds')
 
     # text analysis
-    data_neg = processedtext[:800000]
-    plt.figure(figsize=(20, 20))
-    wc = WordCloud(max_words=1000, width=1600, height=800,
-                   collocations=False).generate(" ".join(data_neg))
-    plt.figure(figsize=(20, 20))
-    plt.imshow(wc)
-    plt.savefig('neg_wordcloud.png')
-    data_pos = processedtext[800000:]
-    wc = WordCloud(max_words=1000, width=1600, height=800,
-                   collocations=False).generate(" ".join(data_pos))
-    plt.figure(figsize=(20, 20))
-    plt.imshow(wc)
-    plt.savefig('pos_wordcloud.png')
+    text_analysis(processedtext)
+
+    # split the data
+    X_train, X_test, y_train, y_test = train_test_split(processedtext, sentiment, test_size=1 - TRAIN_SIZE,
+                                                        random_state=0)
+    print("TRAIN size:", len(X_train))
+    print("TEST size:", len(X_test))
+
+    # create TF-IDF table
+    vectoriser = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
+    vectoriser.fit(X_train)
+    print(f'Vectoriser fitted.')
+    print('No. of feature_words: ', len(vectoriser.get_feature_names()))
+
+    # transform data set into something that we can train and test against
+    X_train = vectoriser.transform(X_train)
+    X_test = vectoriser.transform(X_test)
+    print(f'Data Transformed.')
+
+    return [X_train, X_test, y_train, y_test, vectoriser]
+
 
 def preprocess(textdata):
     """
@@ -158,6 +158,22 @@ def preprocess(textdata):
         processedText.append(tweetwords)
 
     return processedText
+
+
+def text_analysis(processedtext):
+    data_neg = processedtext[:800000]
+    plt.figure(figsize=(20, 20))
+    wc = WordCloud(max_words=1000, width=1600, height=800,
+                   collocations=False).generate(" ".join(data_neg))
+    plt.figure(figsize=(20, 20))
+    plt.imshow(wc)
+    plt.savefig('neg_wordcloud.png')
+    data_pos = processedtext[800000:]
+    wc = WordCloud(max_words=1000, width=1600, height=800,
+                   collocations=False).generate(" ".join(data_pos))
+    plt.figure(figsize=(20, 20))
+    plt.imshow(wc)
+    plt.savefig('pos_wordcloud.png')
 
 
 if __name__ == '__main__':
