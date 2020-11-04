@@ -1,43 +1,17 @@
 # utilities
-import os
 import pickle
-import numpy as np
 import pandas as pd
-import time
 import read_data
 import evaluate
 
-# plotting
-import seaborn as sns
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
-
-# nltk
-import nltk
-
-nltk.download('wordnet')
-from nltk.stem import WordNetLemmatizer
-
-# sklearn
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.linear_model import LogisticRegression
-
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import confusion_matrix, classification_report
 
 def load_models():
-    '''
-    Replace '..path/' by the path of the saved models.
-    '''
-
     # Load the vectoriser.
-    file = open('/vectoriser-ngram-(1,2).pickle', 'rb')
+    file = open('vectoriser-ngram-(1,2).pickle', 'rb')
     vectoriser = pickle.load(file)
     file.close()
     # Load the LR Model.
-    file = open('/Sentiment-LRv1.pickle', 'rb')
+    file = open('Sentiment-LR.pickle', 'rb')
     LRmodel = pickle.load(file)
     file.close()
 
@@ -61,8 +35,8 @@ def predict(vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, vectorizer = read_data.read()
-    evaluate.create_models(X_train, y_train)
+    # X_train, X_test, y_train, y_test, vectorizer = read_data.read()
+    # evaluate.create_models(X_train, y_train)
     # Loading the models.
     vectoriser, LRmodel = load_models()
 
