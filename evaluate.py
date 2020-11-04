@@ -14,6 +14,7 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, classification_report
 
+
 # keras
 # from keras.preprocessing.sequence import pad_sequences
 # from keras.models import Sequential
@@ -38,12 +39,14 @@ def scikit_model_evaluate(model, name, X_test, y_test):
     labels = [f'{v1}\n{v2}' for v1, v2 in zip(group_names, group_percentages)]
     labels = np.asarray(labels).reshape(2, 2)
 
-    sns.heatmap(cf_matrix, annot=labels, cmap='Blues', fmt='',
-                xticklabels=categories, yticklabels=categories)
+    h = sns.heatmap(cf_matrix, annot=labels, cmap='Blues', fmt='',
+                    xticklabels=categories, yticklabels=categories, annot_kws={"fontsize":8})
+    h.ax_heatmap.set_xticklabels(h.ax_heatmap.get_xmajorticklabels(), fontsize=16)
+    h.ax_heatmap.set_yticklabels(h.ax_heatmap.get_ymajorticklabels(), fontsize=16)
 
-    plt.xlabel("Predicted values", fontdict={'size': 14}, labelpad=10)
-    plt.ylabel("Actual values", fontdict={'size': 14}, labelpad=10)
-    plt.title(name + " Confusion Matrix", fontdict={'size': 18}, pad=20)
+    plt.xlabel("Predicted values", fontdict={'size': 24}, labelpad=10)
+    plt.ylabel("Actual values", fontdict={'size': 24}, labelpad=10)
+    plt.title(name + " Confusion Matrix", fontdict={'size': 28}, pad=20)
     plt.savefig(name + " Confusion Matrix.png", dpi=100)
 
 
@@ -76,20 +79,20 @@ def runLogReg_Model(X_train, y_train):
 #     rnn.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])  # rmsprop
 #     history = rnn.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=128, verbose=1)
 
-def runLSTM_Model(X_train, y_train):
-    embed_dim = 128
-    lstm_out = 196
-    max_fatures = 2000
-    model = Sequential()
-    model.add(Embedding(max_fatures, embed_dim, input_length=X.shape[1]))
-    model.add(SpatialDropout1D(0.4))
-    model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
-    model.add(Dense(2, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    print(model.summary())
-    batch_size = 32
-    model.fit(X_train, y_train, epochs=7, batch_size=batch_size, verbose=2)  # up epoch number
-    return model
+# def runLSTM_Model(X_train, y_train):
+#     embed_dim = 128
+#     lstm_out = 196
+#     max_fatures = 2000
+#     model = Sequential()
+#     model.add(Embedding(max_fatures, embed_dim, input_length=X.shape[1]))
+#     model.add(SpatialDropout1D(0.4))
+#     model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
+#     model.add(Dense(2, activation='softmax'))
+#     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+#     print(model.summary())
+#     batch_size = 32
+#     model.fit(X_train, y_train, epochs=7, batch_size=batch_size, verbose=2)  # up epoch number
+#     return model
 
 
 def create_models(X_train, y_train, X_test, y_test, vectoriser):

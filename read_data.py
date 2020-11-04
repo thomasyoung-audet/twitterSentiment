@@ -3,7 +3,7 @@ import re
 import os
 import pandas as pd
 import time
-
+import pickle
 # plotting
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -24,6 +24,7 @@ def read():
     https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
     :return:
     """
+    t = time.time()
     DATASET_COLUMNS = ["sentiment", "ids", "date", "flag", "user", "text"]
     DATASET_ENCODING = "ISO-8859-1"
     TRAIN_SIZE = 0.8
@@ -48,10 +49,9 @@ def read():
     fig = ax.get_figure()
     fig.savefig('test.png')
 
-    t = time.time()
+
     processedtext = preprocess(text)
     print(f'Text Preprocessing complete.')
-    print(f'Time Taken: {round(time.time() - t)} seconds')
 
     # text analysis
     text_analysis(processedtext)
@@ -73,7 +73,32 @@ def read():
     X_test = vectoriser.transform(X_test)
     print(f'Data Transformed.')
 
-    return [X_train, X_test, y_train, y_test, vectoriser]
+    # save the models for later use
+    file = open('vectoriser.pickle', 'wb')
+    pickle.dump(vectoriser, file)
+    file.close()
+
+    # save the models for later use
+    file = open('X_train.pickle', 'wb')
+    pickle.dump(X_train, file)
+    file.close()
+
+    # save the models for later use
+    file = open('X_test.pickle', 'wb')
+    pickle.dump(X_test, file)
+    file.close()
+
+    # save the models for later use
+    file = open('y_train.pickle', 'wb')
+    pickle.dump(y_train, file)
+    file.close()
+
+    # save the models for later use
+    file = open('y_test.pickle', 'wb')
+    pickle.dump(y_test, file)
+    file.close()
+
+    print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
 
 
 def preprocess(textdata):

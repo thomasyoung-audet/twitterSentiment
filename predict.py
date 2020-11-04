@@ -6,16 +6,41 @@ import evaluate
 
 
 def load_models():
-    # Load the vectoriser.
-    file = open('vectoriser-ngram-(1,2).pickle', 'rb')
-    vectoriser = pickle.load(file)
+    # Load the Naive Bayes model.
+    file = open('Sentiment-BNB.pickle', 'rb')
+    BNBmodel = pickle.load(file)
     file.close()
     # Load the LR Model.
     file = open('Sentiment-LR.pickle', 'rb')
     LRmodel = pickle.load(file)
     file.close()
 
-    return vectoriser, LRmodel
+    return BNBmodel, LRmodel
+
+
+def load_data():
+    # Load the vectoriser.
+    file = open('vectoriser.pickle', 'rb')
+    vectoriser = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('X_train.pickle', 'rb')
+    X_train = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('X_test.pickle', 'rb')
+    X_test = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('y_train.pickle', 'rb')
+    y_train = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('y_test.pickle', 'rb')
+    y_test = pickle.load(file)
+    file.close()
+
+    return X_train, y_train, X_test, y_test, vectoriser
 
 
 def predict(vectoriser, model, text):
@@ -35,10 +60,10 @@ def predict(vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, vectorizer = read_data.read()
-    evaluate.create_models(X_train, y_train, X_test, y_test, vectorizer)
+    X_train, X_test, y_train, y_test, vectoriser = load_data()
+    evaluate.create_models(X_train, y_train, X_test, y_test, vectoriser)
     # Loading the models.
-    vectoriser, LRmodel = load_models()
+    BNBmodel, LRmodel = load_models()
 
     # Text to classify should be in a list.
     text = ["I hate twitter",
@@ -46,4 +71,6 @@ if __name__ == "__main__":
             "Mr. Stark, I don't feel so good"]
 
     df = predict(vectoriser, LRmodel, text)
+    print(df.head())
+    df = predict(vectoriser, BNBmodel, text)
     print(df.head())
