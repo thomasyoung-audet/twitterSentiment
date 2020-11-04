@@ -39,17 +39,17 @@ def scikit_model_evaluate(model, name, X_test, y_test):
     labels = [f'{v1}\n{v2}' for v1, v2 in zip(group_names, group_percentages)]
     labels = np.asarray(labels).reshape(2, 2)
 
-    h = sns.heatmap(cf_matrix, annot=labels, cmap='Blues', fmt='',
-                    xticklabels=categories, yticklabels=categories, annot_kws={"fontsize":8})
-    h.ax_heatmap.set_xticklabels(h.ax_heatmap.get_xmajorticklabels(), fontsize=16)
-    h.ax_heatmap.set_yticklabels(h.ax_heatmap.get_ymajorticklabels(), fontsize=16)
+    sns.heatmap(cf_matrix, annot=labels, cmap='Blues', fmt='',
+                    xticklabels=categories, yticklabels=categories, annot_kws={"fontsize": 8})
 
-    plt.xlabel("Predicted values", fontdict={'size': 24}, labelpad=10)
-    plt.ylabel("Actual values", fontdict={'size': 24}, labelpad=10)
-    plt.title(name + " Confusion Matrix", fontdict={'size': 28}, pad=20)
-    plt.savefig(name + " Confusion Matrix.png", dpi=100)
+    plt.xlabel("Predicted values", fontdict={'size': 14}, labelpad=10)
+    plt.ylabel("Actual values", fontdict={'size': 14}, labelpad=10)
+    plt.title(name + " Confusion Matrix", fontdict={'size': 18}, pad=20)
+    plt.savefig(name + " Confusion Matrix.png")
+    plt.clf()
 
 
+# TODO add timing to all of these.
 def runBernouliNB_Model(X_train, y_train):
     BNBmodel = BernoulliNB(alpha=2)
     BNBmodel.fit(X_train, y_train)

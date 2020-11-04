@@ -60,7 +60,7 @@ def predict(vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, vectoriser = load_data()
+    X_train, y_train, X_test, y_test, vectoriser = load_data()
     evaluate.create_models(X_train, y_train, X_test, y_test, vectoriser)
     # Loading the models.
     BNBmodel, LRmodel = load_models()
