@@ -21,8 +21,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 # from keras.layers import SimpleRNN, Dense, Activation, Embedding, LSTM, SpatialDropout1D
 
 
-def scikit_model_evaluate(model, name):
-    X_train, X_test, y_train, y_test, vectorizer = read_data.read()
+def scikit_model_evaluate(model, name, X_test, y_test):
     # Predict values for Test dataset
     y_pred = model.predict(X_test)
 
@@ -46,7 +45,6 @@ def scikit_model_evaluate(model, name):
     plt.ylabel("Actual values", fontdict={'size': 14}, labelpad=10)
     plt.title(name + " Confusion Matrix", fontdict={'size': 18}, pad=20)
     plt.savefig(name + " Confusion Matrix.png", dpi=100)
-    return vectorizer
 
 
 def runBernouliNB_Model(X_train, y_train):
@@ -94,13 +92,16 @@ def runLSTM_Model(X_train, y_train):
     return model
 
 
-def create_models(X_train, y_train):
+def create_models(X_train, y_train, X_test, y_test, vectoriser):
+    print("Naive Bayes")
     BNBmodel = runBernouliNB_Model(X_train, y_train)
-    scikit_model_evaluate(BNBmodel, "Bernouli")
+    scikit_model_evaluate(BNBmodel, "Bernouli", X_test, y_test)
+    print("SVC")
     SVCmodel = runLinearSVC_Model(X_train, y_train)
-    scikit_model_evaluate(SVCmodel, "SVC")
+    scikit_model_evaluate(SVCmodel, "SVC", X_test, y_test)
+    print("Logistic Regression")
     LRmodel = runLogReg_Model(X_train, y_train)
-    vectoriser = scikit_model_evaluate(LRmodel, "Log Reg")
+    scikit_model_evaluate(LRmodel, "Log Reg", X_test, y_test)
     # save the models for later use
     file = open('vectoriser-ngram-(1,2).pickle', 'wb')
     pickle.dump(vectoriser, file)
@@ -112,4 +113,8 @@ def create_models(X_train, y_train):
 
     file = open('Sentiment-BNB.pickle', 'wb')
     pickle.dump(BNBmodel, file)
+    file.close()
+
+    file = open('Sentiment-SVC.pickle', 'wb')
+    pickle.dump(SVCmodel, file)
     file.close()

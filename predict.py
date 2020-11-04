@@ -35,8 +35,8 @@ def predict(vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    # X_train, X_test, y_train, y_test, vectorizer = read_data.read()
-    # evaluate.create_models(X_train, y_train)
+    X_train, X_test, y_train, y_test, vectorizer = read_data.read()
+    evaluate.create_models(X_train, y_train, X_test, y_test, vectorizer)
     # Loading the models.
     vectoriser, LRmodel = load_models()
 
