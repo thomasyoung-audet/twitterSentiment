@@ -71,6 +71,8 @@ if __name__ == "__main__":
             "Mr. Stark, I don't feel so good"]
 
     df = predict(vectoriser, LRmodel, text)
+    print("=========LR model=========")
     print(df.head())
     df = predict(vectoriser, BNBmodel, text)
+    print("=========BNB model========")
     print(df.head())
