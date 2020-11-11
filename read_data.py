@@ -17,7 +17,7 @@ from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk import FreqDist
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from nltk import Counter
+from collections import Counter
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -47,27 +47,9 @@ def read():
     # Replacing the values to ease understanding.
     dataset['sentiment'] = dataset['sentiment'].replace(4, 1)
     # Plotting the distribution for dataset.
-    ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
-                                                   legend=False)
-    ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
-    # Storing data in lists.
-    text, sentiment = list(dataset['text']), list(dataset['sentiment'])
-    fig = ax.get_figure()
-    fig.savefig('bar_graph.png')
-    all_words = []
-    for line in list(dataset['text']):
-        words = line.split()
-        for word in words:
-            all_words.append(word.lower())
-
-    plt.figure(figsize=(12, 5))
-    plt.title('Top 25 most common words')
-    plt.xticks(fontsize=13, rotation=90)
-    fd = nltk.FreqDist(all_words)
-    fd.plot(25, cumulative=False)
+    make_graphs(dataset)
 
     processedtext, polarity_scores = preprocess(text)
-    polarity_scores = preprocess(text)
     # save the models for later use
     file = open('processedtext.pickle', 'wb')
     file2 = open('polarity_scores.pickle', 'wb')
@@ -76,18 +58,13 @@ def read():
     pickle.dump(polarity_scores, file2)
     file2.close()
     # Load
-    file = open('polarity_scores.pickle', 'rb')
+    file = open('processedtext.pickle', 'rb')
     processedtext = pickle.load(file)
     file.close()
     file = open('polarity_scores.pickle', 'rb')
     polarity_scores = pickle.load(file)
     file.close()
     print(f'Text Preprocessing complete.')
-    df2 = pd.DataFrame([processedtext])
-    vectoriser = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
-    doc_vec = vectoriser.fit_transform(processedtext)
-    # Create dataFrame
-    df2 = pd.DataFrame(doc_vec.toarray().transpose(), index=vectoriser.get_feature_names())
     # text analysis
     # get_wordcloud(processedtext)
 
@@ -97,7 +74,7 @@ def read():
     print("TRAIN size:", len(X_train))
     print("TEST size:", len(X_test))
 
-    # create TF-IDF table
+    # create TF-IDF table # shouldn't this be 248446, the number of unique words?
     vectoriser = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
     vectoriser.fit(X_train)
     print(f'Vectoriser fitted.')
@@ -198,7 +175,7 @@ def preprocess(textdata):
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
 
         words = lemmatize_sentence(tweet.split(), wordLemm, stopwordlist)
-        processedText.append(words)
+        processedText.append(' '.join(words))
         i += 1
     return processedText, polarity_score
 
@@ -232,6 +209,27 @@ def get_wordcloud(processedtext):
     plt.figure(figsize=(20, 20))
     plt.imshow(wc)
     plt.savefig('pos_wordcloud.png')
+
+
+def make_graphs(dataset):
+    ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
+                                                   legend=False)
+    ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
+    # Storing data in lists.
+    fig = ax.get_figure()
+    fig.savefig('bar_graph.png')
+    all_words = []
+    for line in list(dataset['text']):
+        words = line.split()
+        for word in words:
+            all_words.append(word.lower())
+
+    plt.figure(figsize=(12, 5))
+    plt.title('Top 25 most common words')
+    plt.xticks(fontsize=13, rotation=90)
+    fd = nltk.FreqDist(all_words)
+    fd.plot(25, cumulative=False)
+    plt.savefig('common_words.png')
 
 
 if __name__ == '__main__':
