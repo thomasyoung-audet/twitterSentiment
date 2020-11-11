@@ -40,14 +40,14 @@ def read():
     print("Open file:", dataset_path)
     dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS)
 
-    # Storing data in lists.
-    text, sentiment = list(dataset['text']), list(dataset['sentiment'])
     # Removing the unnecessary columns.
     dataset = dataset[['sentiment', 'text']]
     # Replacing the values to ease understanding.
     dataset['sentiment'] = dataset['sentiment'].replace(4, 1)
     # Plotting the distribution for dataset.
-    make_graphs(dataset)
+    # make_graphs(dataset)
+    # Storing data in lists.
+    text, sentiment = list(dataset['text']), list(dataset['sentiment'])
 
     processedtext, polarity_scores = preprocess(text)
     # save the models for later use

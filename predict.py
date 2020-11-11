@@ -45,7 +45,8 @@ def load_data():
 
 def predict(vectoriser, model, text):
     # Predict the sentiment
-    textdata = vectoriser.transform(read_data.preprocess(text))
+    processedtext, polarity_scores = read_data.preprocess(text)
+    textdata = vectoriser.transform(processedtext)
     sentiment = model.predict(textdata)
 
     # Make a list of text with sentiment.
