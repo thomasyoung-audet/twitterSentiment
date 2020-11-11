@@ -14,7 +14,6 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, classification_report
 
-
 # keras
 # from keras.preprocessing.sequence import pad_sequences
 # from keras.models import Sequential
