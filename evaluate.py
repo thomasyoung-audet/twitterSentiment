@@ -2,7 +2,8 @@
 import os
 import pickle
 import numpy as np
-import read_data
+import time
+
 
 # plotting
 import seaborn as sns
@@ -48,22 +49,27 @@ def scikit_model_evaluate(model, name, X_test, y_test):
     plt.clf()
 
 
-# TODO add timing to all of these.
 def runBernouliNB_Model(X_train, y_train):
+    t = time.time()
     BNBmodel = BernoulliNB(alpha=2)
     BNBmodel.fit(X_train, y_train)
+    print(f'Bernoulli Naive Bayes fit complete. Time Taken: {round(time.time() - t)} seconds')
     return BNBmodel
 
 
 def runLinearSVC_Model(X_train, y_train):
+    t = time.time()
     SVCmodel = LinearSVC()
     SVCmodel.fit(X_train, y_train)
+    print(f'Linear SVC fit complete. Time Taken: {round(time.time() - t)} seconds')
     return SVCmodel
 
 
 def runLogReg_Model(X_train, y_train):
+    t = time.time()
     LRmodel = LogisticRegression(C=2, max_iter=1000, n_jobs=-1)
     LRmodel.fit(X_train, y_train)
+    print(f'Logistic Regression fit complete. Time Taken: {round(time.time() - t)} seconds')
     return LRmodel
 
 
