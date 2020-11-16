@@ -100,7 +100,7 @@ def runLogReg_Model(X_train, y_train):
 #     return model
 
 
-def create_models(X_train, y_train, X_test, y_test, vectoriser):
+def create_models(X_train, y_train, X_test, y_test):
     print("Naive Bayes")
     BNBmodel = runBernouliNB_Model(X_train, y_train)
     scikit_model_evaluate(BNBmodel, "Bernouli", X_test, y_test)
@@ -111,10 +111,6 @@ def create_models(X_train, y_train, X_test, y_test, vectoriser):
     LRmodel = runLogReg_Model(X_train, y_train)
     scikit_model_evaluate(LRmodel, "Log Reg", X_test, y_test)
     # save the models for later use
-    file = open('vectoriser-ngram-(1,2).pickle', 'wb')
-    pickle.dump(vectoriser, file)
-    file.close()
-
     file = open('Sentiment-LR.pickle', 'wb')
     pickle.dump(LRmodel, file)
     file.close()
