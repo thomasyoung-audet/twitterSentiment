@@ -53,7 +53,7 @@ def predict(pos_vectoriser, tweet_vectoriser, model, text):
             }
 
     df = pd.DataFrame(data, columns=['part_of_speech', 'word_vector', 'lexicon_analysis', 'polarity_shift_word'])
-    textdata = read_data.vectorize(df, pos_vectoriser, tweet_vectoriser)
+    textdata = read_data.transform(df, pos_vectoriser, tweet_vectoriser)
     sentiment = model.predict(textdata)
 
     # Make a list of text with sentiment.
@@ -69,7 +69,7 @@ def predict(pos_vectoriser, tweet_vectoriser, model, text):
 
 if __name__ == "__main__":
     X_train, y_train, X_test, y_test, (pos_vectoriser, tweet_vectoriser) = load_data()
-    evaluate.create_models(X_train, y_train, X_test, y_test)
+    # evaluate.create_models(X_train, y_train, X_test, y_test)
     # Loading the models.
     BNBmodel, LRmodel = load_models()
 
