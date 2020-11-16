@@ -17,9 +17,10 @@ from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.corpus import sentiwordnet as swn
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
+import scipy as sp
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.pipeline import FeatureUnion
 
 
 def read():
@@ -36,7 +37,7 @@ def read():
     dataset_filename = os.listdir("../project/input")[0]
     dataset_path = os.path.join("../project", "input", dataset_filename)
     print("Open file:", dataset_path)
-    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=99)
+    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=1000000)
 
     # Removing the unnecessary columns.
     dataset = dataset[['sentiment', 'text']]
@@ -48,16 +49,10 @@ def read():
     text, sentiment = list(dataset['text']), list(dataset['sentiment'])
 
     part_of_speech, processedtext, lexicon_analysis, polarity_shift_word, longest = preprocess(text)
-    total = []
     # padding
-    for i in range(len(part_of_speech)):
-        padding_len = longest - len(part_of_speech[i])
-        l = [None] * padding_len
-        part_of_speech[i] = part_of_speech[i] + l
-        processedtext[i] = processedtext[i] + l
-        lexicon_analysis[i] = lexicon_analysis[i] + l
-        total.append(part_of_speech[i] + processedtext[i] + lexicon_analysis[i])
-
+    # for i in range(len(lexicon_analysis)):
+    #     padding_len = longest - len(lexicon_analysis[i])
+    #     lexicon_analysis[i] = lexicon_analysis[i] + [0.0] * padding_len
     # # save the models for later use
     # file = open('processedtext.pickle', 'wb')
     # file2 = open('polarity_scores.pickle', 'wb')
@@ -84,26 +79,29 @@ def read():
     df = pd.DataFrame(data, columns=['part_of_speech', 'word_vector', 'lexicon_analysis', 'polarity_shift_word'])
 
     # split the data
-    X_train, X_test, y_train, y_test = train_test_split(total, sentiment, test_size=1 - TRAIN_SIZE, random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(df, sentiment, test_size=1 - TRAIN_SIZE, random_state=0)
 
     print("TRAIN size:", len(X_train))
     print("TEST size:", len(X_test))
 
-    vectoriser = CountVectorizer()
+    tweet_vectoriser = CountVectorizer(ngram_range=(1, 2))
+    pos_vectoriser = CountVectorizer(token_pattern=r"(?u)\b\w+\b")
 
-    vectoriser.fit(X_train)
+    X_train = vectorize(X_train, pos_vectoriser, tweet_vectoriser)
+    # X_columns = tweet_vectoriser.get_feature_names() + pos_vectoriser.get_feature_names() + df[
+    #     ['lexicon_analysis', 'polarity_shift_word']].columns.tolist()
+    # print(X_columns)
     print(f'Vectoriser fitted.')
-    print('No. of feature_words: ', len(vectoriser.get_feature_names()))
+    print('No. of feature_words: ', len(tweet_vectoriser.get_feature_names()) + 6)
 
     # transform data set into something that we can train and test against
-    X_train = vectoriser.transform(X_train)
-    X_test = vectoriser.transform(X_test)
+    X_test = transform(X_test, pos_vectoriser, tweet_vectoriser)
 
     print(f'Data Transformed.')
 
     # save the models for later use
     file = open('vectoriser.pickle', 'wb')
-    pickle.dump(vectoriser, file)
+    pickle.dump((pos_vectoriser, tweet_vectoriser), file)
     file.close()
 
     # save the models for later use
@@ -129,6 +127,22 @@ def read():
     print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
 
 
+def vectorize(data, pos_vectoriser, text_vectoriser):
+    vectorized_data = sp.sparse.hstack((pos_vectoriser.fit_transform(data['part_of_speech']),
+                                        text_vectoriser.fit_transform(data['word_vector']),
+                                        data[['lexicon_analysis', 'polarity_shift_word']].values),
+                                       format='csr')
+    return vectorized_data
+
+
+def transform(data, pos_vectoriser, text_vectoriser):
+    vectorized_data = sp.sparse.hstack((pos_vectoriser.transform(data['part_of_speech']),
+                                        text_vectoriser.transform(data['word_vector']),
+                                        data[['lexicon_analysis', 'polarity_shift_word']].values),
+                                       format='csr')
+    return vectorized_data
+
+
 def preprocess(textdata):
     """
     CREDIT Nikit Periwal https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
@@ -139,7 +153,7 @@ def preprocess(textdata):
     Replacing URLs: Links starting with "http" or "https" or "www" are replaced by "URL".
     Replacing Emojis: Replace emojis by using a pre-defined dictionary containing emojis along with their meaning.
     (eg: ":)" to "smile")
-    Replacing Usernames: Replace @Usernames with word "USER". (eg: "@Kaggle" to "USER")
+    Removing Usernames: Replace @Usernames with nothing.
     Removing Non-Alphabets: Replacing characters except Digits and Alphabets with a space.
     Removing Consecutive letters: 3 or more consecutive letters are replaced by 2 letters. (eg: "Heyyyy" to "Heyy")
     Removing Short Words: Words with length less than 2 are removed.
@@ -179,6 +193,10 @@ def preprocess(textdata):
     i = 0
     for tweet in textdata:
         print("tweet #" + str(i))
+
+        score = analyser.polarity_scores(tweet)
+        lexicon_analysis.append(score['compound'])
+
         # Replace all emojis.
         for emoji in emojis.keys():
             tweet = tweet.replace(emoji, "emoji_" + emojis[emoji])  # "EMOJI" + emojis[emoji])
@@ -190,10 +208,10 @@ def preprocess(textdata):
         tweet = re.sub(maxAlphaPattern, " ", tweet)
         lexicon = []
 
-        for word in tweet.split():
-            if len(word) > 1:
-                scores = analyser.polarity_scores(word)
-                lexicon.append(scores['compound'])
+        # for word in tweet.split():
+        #     if len(word) > 1:
+        #         scores = analyser.polarity_scores(word)
+        #         lexicon.append(scores['compound'])
 
         # Replace all non alphabets.
         tweet = re.sub(alphaPattern, " ", tweet)
@@ -201,14 +219,14 @@ def preprocess(textdata):
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
         tweet = tweet.lower()
 
-        polarity = [0]
+        polarity = 0
         if 'not' in tweet or 'but' in tweet:
-            polarity = [1]
+            polarity = 1
 
         lemmatized, pos = lemmatize_sentence(tweet.split(), wordLemm)
         processedText.append(lemmatized)
         part_of_speech.append(pos)
-        lexicon_analysis.append(lexicon)
+        # lexicon_analysis.append(lexicon)
         polarity_shift_word.append(polarity)
         if len(tweet.split()) > longest:
             longest = len(tweet.split())
@@ -231,7 +249,9 @@ def lemmatize_sentence(tokens, lemmatizer):
                 pos = 'o'  # other
             lemmatized_sentence.append(lemmatizer.lemmatize(word))
             partofspeech.append(pos)
-    return lemmatized_sentence, partofspeech
+    final_text = ' '.join(lemmatized_sentence)
+    final_pos = ' '.join(partofspeech)
+    return final_text, final_pos
 
 
 def get_wordcloud(processedtext):
