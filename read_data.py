@@ -15,18 +15,16 @@ import nltk
 # nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
-from nltk import FreqDist
+from nltk.corpus import sentiwordnet as swn
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from collections import Counter
 
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.pipeline import FeatureUnion
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 def read():
     """
-    Much of this is inspired from Nikit Periwal at
+    Some of this is inspired from Nikit Periwal at
     https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
     :return:
     """
@@ -36,9 +34,9 @@ def read():
     TRAIN_SIZE = 0.8
 
     dataset_filename = os.listdir("../project/input")[0]
-    dataset_path = os.path.join("../project/", "input", dataset_filename)
+    dataset_path = os.path.join("../project", "input", dataset_filename)
     print("Open file:", dataset_path)
-    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS)
+    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=99)
 
     # Removing the unnecessary columns.
     dataset = dataset[['sentiment', 'text']]
@@ -49,33 +47,50 @@ def read():
     # Storing data in lists.
     text, sentiment = list(dataset['text']), list(dataset['sentiment'])
 
-    processedtext, polarity_scores = preprocess(text)
-    # save the models for later use
-    file = open('processedtext.pickle', 'wb')
-    file2 = open('polarity_scores.pickle', 'wb')
-    pickle.dump(processedtext, file)
-    file.close()
-    pickle.dump(polarity_scores, file2)
-    file2.close()
+    part_of_speech, processedtext, lexicon_analysis, polarity_shift_word, longest = preprocess(text)
+    total = []
+    # padding
+    for i in range(len(part_of_speech)):
+        padding_len = longest - len(part_of_speech[i])
+        l = [None] * padding_len
+        part_of_speech[i] = part_of_speech[i] + l
+        processedtext[i] = processedtext[i] + l
+        lexicon_analysis[i] = lexicon_analysis[i] + l
+        total.append(part_of_speech[i] + processedtext[i] + lexicon_analysis[i])
+
+    # # save the models for later use
+    # file = open('processedtext.pickle', 'wb')
+    # file2 = open('polarity_scores.pickle', 'wb')
+    # pickle.dump(processedtext, file)
+    # file.close()
+    # pickle.dump(polarity_scores, file2)
+    # file2.close()
     # Load
-    file = open('processedtext.pickle', 'rb')
-    processedtext = pickle.load(file)
-    file.close()
-    file = open('polarity_scores.pickle', 'rb')
-    polarity_scores = pickle.load(file)
-    file.close()
+    # file = open('processedtext.pickle', 'rb')
+    # processedtext = pickle.load(file)
+    # file.close()
+    # file = open('polarity_scores.pickle', 'rb')
+    # polarity_scores = pickle.load(file)
+    # file.close()
     print(f'Text Preprocessing complete.')
     # text analysis
     # get_wordcloud(processedtext)
+    data = {'part_of_speech': part_of_speech,
+            'word_vector': processedtext,
+            'lexicon_analysis': lexicon_analysis,
+            'polarity_shift_word': polarity_shift_word,
+            }
+
+    df = pd.DataFrame(data, columns=['part_of_speech', 'word_vector', 'lexicon_analysis', 'polarity_shift_word'])
 
     # split the data
-    X_train, X_test, y_train, y_test = train_test_split(processedtext, sentiment, test_size=1 - TRAIN_SIZE,
-                                                        random_state=0)
+    X_train, X_test, y_train, y_test = train_test_split(total, sentiment, test_size=1 - TRAIN_SIZE, random_state=0)
+
     print("TRAIN size:", len(X_train))
     print("TEST size:", len(X_test))
 
-    # create TF-IDF table # shouldn't this be 248446, the number of unique words?
-    vectoriser = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
+    vectoriser = CountVectorizer()
+
     vectoriser.fit(X_train)
     print(f'Vectoriser fitted.')
     print('No. of feature_words: ', len(vectoriser.get_feature_names()))
@@ -83,6 +98,7 @@ def read():
     # transform data set into something that we can train and test against
     X_train = vectoriser.transform(X_train)
     X_test = vectoriser.transform(X_test)
+
     print(f'Data Transformed.')
 
     # save the models for later use
@@ -133,7 +149,7 @@ def preprocess(textdata):
 
     """
 
-    emojis = {':)': 'smile', ':-)': 'smile', ';d': 'wink', ':-E': 'vampire', ':(': 'sad',
+    emojis = {':)': 'smile', ':-)': 'smile', ';d': 'smile', ';D': 'wink', ':-E': 'vampire', ':(': 'sad',
               ':-(': 'sad', ':-<': 'sad', ':P': 'raspberry', ':O': 'surprised',
               ':-@': 'shocked', ':@': 'shocked', ':-$': 'confused', ':\\': 'annoyed',
               ':#': 'mute', ':X': 'mute', ':^)': 'smile', ':-&': 'confused', '$_$': 'greedy',
@@ -141,10 +157,13 @@ def preprocess(textdata):
               '<(-_-)>': 'robot', 'd[-_-]b': 'dj', ":'-)": 'sadsmile', ';)': 'wink',
               ';-)': 'wink', 'O:-)': 'angel', 'O*-)': 'angel', '(:-D': 'gossip', '=^.^=': 'cat'}
 
-    stopwordlist = set(stopwords.words("english"))
+    # stopwordlist = set(stopwords.words("english"))
 
     processedText = []
-    polarity_score = []
+    part_of_speech = []
+    lexicon_analysis = []
+    polarity_shift_word = []
+    longest = 0
 
     # Create Lemmatizer and Stemmer.
     wordLemm = WordNetLemmatizer()
@@ -154,45 +173,65 @@ def preprocess(textdata):
     urlPattern = r"((http://)[^ ]*|(https://)[^ ]*|( www\.)[^ ]*)"
     userPattern = '@[^\s]+'
     alphaPattern = "[^a-zA-Z0-9]"
+    maxAlphaPattern = "[^a-zA-Z0-9!?.]"
     sequencePattern = r"(.)\1\1+"
     seqReplacePattern = r"\1\1"
-    i = 1
+    i = 0
     for tweet in textdata:
         print("tweet #" + str(i))
-        polarity_score.append(analyser.polarity_scores(tweet))
-        tweet = tweet.lower()
-
-        # Replace all URls with 'URL'
-        tweet = re.sub(urlPattern, ' URL', tweet)
         # Replace all emojis.
         for emoji in emojis.keys():
-            tweet = tweet.replace(emoji, emojis[emoji])  # "EMOJI" + emojis[emoji])
-            # Replace @USERNAME to 'USER'.
-        tweet = re.sub(userPattern, ' USER', tweet)
+            tweet = tweet.replace(emoji, "emoji_" + emojis[emoji])  # "EMOJI" + emojis[emoji])
+        # Replace all URls with 'URL'
+        tweet = re.sub(urlPattern, ' URL', tweet)
+        # Replace @USERNAME to 'USER'. Actually just remove it.
+        tweet = re.sub(userPattern, '', tweet)
+        # Replace most non alphabets.
+        tweet = re.sub(maxAlphaPattern, " ", tweet)
+        lexicon = []
+
+        for word in tweet.split():
+            if len(word) > 1:
+                scores = analyser.polarity_scores(word)
+                lexicon.append(scores['compound'])
+
         # Replace all non alphabets.
         tweet = re.sub(alphaPattern, " ", tweet)
         # Replace 3 or more consecutive letters by 2 letter.
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
+        tweet = tweet.lower()
 
-        words = lemmatize_sentence(tweet.split(), wordLemm, stopwordlist)
-        processedText.append(' '.join(words))
+        polarity = [0]
+        if 'not' in tweet or 'but' in tweet:
+            polarity = [1]
+
+        lemmatized, pos = lemmatize_sentence(tweet.split(), wordLemm)
+        processedText.append(lemmatized)
+        part_of_speech.append(pos)
+        lexicon_analysis.append(lexicon)
+        polarity_shift_word.append(polarity)
+        if len(tweet.split()) > longest:
+            longest = len(tweet.split())
         i += 1
-    return processedText, polarity_score
+    return part_of_speech, processedText, lexicon_analysis, polarity_shift_word, longest
 
 
-def lemmatize_sentence(tokens, lemmatizer, stopwordlist):
+def lemmatize_sentence(tokens, lemmatizer):
     lemmatized_sentence = []
+    partofspeech = []
     for word, tag in pos_tag(tokens):
-        if word not in stopwordlist:
-            if len(word) > 1:
-                if tag.startswith('NN'):
-                    pos = 'n'
-                elif tag.startswith('VB'):
-                    pos = 'v'
-                else:
-                    pos = 'a'
-                lemmatized_sentence.append(lemmatizer.lemmatize(word, pos))
-    return lemmatized_sentence
+        if len(word) > 1:
+            if tag.startswith('NN'):
+                pos = 'n'  # noun
+            elif tag.startswith('VB'):
+                pos = 'v'  # verb
+            elif tag.startswith('JJ'):
+                pos = 'a'  # adjective
+            else:
+                pos = 'o'  # other
+            lemmatized_sentence.append(lemmatizer.lemmatize(word))
+            partofspeech.append(pos)
+    return lemmatized_sentence, partofspeech
 
 
 def get_wordcloud(processedtext):
