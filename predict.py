@@ -18,7 +18,7 @@ def load_models():
     return BNBmodel, LRmodel
 
 
-def load_data():
+def load_data(): #TODO
     # Load the vectoriser.
     file = open('vectoriser.pickle', 'rb')
     vectoriser = pickle.load(file)
@@ -43,7 +43,7 @@ def load_data():
     return X_train, y_train, X_test, y_test, vectoriser
 
 
-def predict(pos_vectoriser, tweet_vectoriser, model, text):
+def predict(tweet_vectoriser, model, text):
     # Predict the sentiment
     part_of_speech, processedtext, lexicon_analysis, polarity_shift_word, longest = read_data.preprocess(text)
     data = {'part_of_speech': part_of_speech,
@@ -53,7 +53,7 @@ def predict(pos_vectoriser, tweet_vectoriser, model, text):
             }
 
     df = pd.DataFrame(data, columns=['part_of_speech', 'word_vector', 'lexicon_analysis', 'polarity_shift_word'])
-    textdata = read_data.transform(df, pos_vectoriser, tweet_vectoriser)
+    textdata = read_data.transform(df, tweet_vectoriser)
     sentiment = model.predict(textdata)
 
     # Make a list of text with sentiment.
@@ -68,8 +68,11 @@ def predict(pos_vectoriser, tweet_vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    X_train, y_train, X_test, y_test, (pos_vectoriser, tweet_vectoriser) = load_data()
-    # evaluate.create_models(X_train, y_train, X_test, y_test)
+    X_train, y_train, X_test, y_test, vectorizers = load_data()
+    tweet_vectoriser_Bow = vectorizers[0]
+    tweet_vectoriser_TFIDF_no_ngram = vectorizers[1]
+    tweet_vectoriser_TFIDF_with_ngram = vectorizers[2]
+    evaluate.create_models(X_train, y_train, X_test, y_test)
     # Loading the models.
     BNBmodel, LRmodel = load_models()
 
@@ -78,9 +81,9 @@ if __name__ == "__main__":
             "May the Force be with you.",
             "Mr. Stark, I don't feel so good"]
 
-    df = predict(pos_vectoriser, tweet_vectoriser, LRmodel, text)
+    df = predict(tweet_vectoriser_Bow, LRmodel, text)
     print("=========LR model=========")
     print(df.head())
-    df = predict(pos_vectoriser, tweet_vectoriser, BNBmodel, text)
+    df = predict(tweet_vectoriser_Bow, BNBmodel, text)
     print("=========BNB model========")
     print(df.head())

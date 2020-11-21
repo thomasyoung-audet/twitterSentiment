@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 # nltk
 from nltk.stem import WordNetLemmatizer
+from nltk import PorterStemmer
 import nltk
 # nltk.download('stopwords')
 # nltk.download('averaged_perceptron_tagger')
@@ -20,7 +21,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import scipy as sp
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.pipeline import FeatureUnion
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def read():
@@ -37,14 +38,12 @@ def read():
     dataset_filename = os.listdir("../project/input")[0]
     dataset_path = os.path.join("../project", "input", dataset_filename)
     print("Open file:", dataset_path)
-    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=1000000)
+    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=999)
 
     # Removing the unnecessary columns.
     dataset = dataset[['sentiment', 'text']]
     # Replacing the values to ease understanding.
     dataset['sentiment'] = dataset['sentiment'].replace(4, 1)
-    # Plotting the distribution for dataset.
-    # make_graphs(dataset)
     # Storing data in lists.
     text, sentiment = list(dataset['text']), list(dataset['sentiment'])
 
@@ -68,8 +67,7 @@ def read():
     # polarity_scores = pickle.load(file)
     # file.close()
     print(f'Text Preprocessing complete.')
-    # text analysis
-    # get_wordcloud(processedtext)
+
     data = {'part_of_speech': part_of_speech,
             'word_vector': processedtext,
             'lexicon_analysis': lexicon_analysis,
@@ -84,60 +82,73 @@ def read():
     print("TRAIN size:", len(X_train))
     print("TEST size:", len(X_test))
 
-    tweet_vectoriser = CountVectorizer(ngram_range=(1, 2))
+    tweet_vectoriser_Bow = CountVectorizer(ngram_range=(1, 1))
+    tweet_vectoriser_TFIDF_no_ngram = TfidfVectorizer(ngram_range=(1, 1))
+    tweet_vectoriser_TFIDF_with_ngram = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
     pos_vectoriser = CountVectorizer(token_pattern=r"(?u)\b\w+\b")
 
-    X_train = vectorize(X_train, pos_vectoriser, tweet_vectoriser)
-    # X_columns = tweet_vectoriser.get_feature_names() + pos_vectoriser.get_feature_names() + df[
-    #     ['lexicon_analysis', 'polarity_shift_word']].columns.tolist()
-    # print(X_columns)
-    print(f'Vectoriser fitted.')
-    print('No. of feature_words: ', len(tweet_vectoriser.get_feature_names()) + 6)
+    X_train_BoW = vectorize(X_train, tweet_vectoriser_Bow)
+    X_train_TFIDF_no_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_no_ngram)
+    X_train_TFIDF_with_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_with_ngram)
 
-    # transform data set into something that we can train and test against
-    X_test = transform(X_test, pos_vectoriser, tweet_vectoriser)
+    print(f'Bag of Words Vectoriser fitted.')
+    print('No. of feature_words: ', len(tweet_vectoriser_Bow.get_feature_names()) + 2)
 
-    print(f'Data Transformed.')
+    # transform tes data set
+    X_test_BoW = transform(X_test, tweet_vectoriser_Bow)
+    X_test_TFIDF_no_ngram = transform(X_test, tweet_vectoriser_TFIDF_no_ngram)
+    X_test_with_ngram = transform(X_test, tweet_vectoriser_TFIDF_with_ngram)
+
+    save_models(X_train_BoW, X_test_BoW, 'BoW')
+    save_models(X_train_TFIDF_no_ngram, X_test_TFIDF_no_ngram, 'TFIDF_no_ngram')
+    save_models(X_train_TFIDF_with_ngram, X_test_with_ngram, 'TFIDF_with_ngram')
 
     # save the models for later use
     file = open('vectoriser.pickle', 'wb')
-    pickle.dump((pos_vectoriser, tweet_vectoriser), file)
+    vectorisers = [tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram]
+    pickle.dump(vectorisers, file)
     file.close()
 
-    # save the models for later use
-    file = open('X_train.pickle', 'wb')
-    pickle.dump(X_train, file)
-    file.close()
-
-    # save the models for later use
-    file = open('X_test.pickle', 'wb')
-    pickle.dump(X_test, file)
-    file.close()
-
-    # save the models for later use
     file = open('y_train.pickle', 'wb')
     pickle.dump(y_train, file)
     file.close()
 
-    # save the models for later use
     file = open('y_test.pickle', 'wb')
     pickle.dump(y_test, file)
     file.close()
 
     print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
 
+    # Plotting the distribution for dataset.
+    make_graphs(dataset, X_train, X_test)
+    # text analysis
+    # get_wordcloud(processedtext)
 
-def vectorize(data, pos_vectoriser, text_vectoriser):
-    vectorized_data = sp.sparse.hstack((pos_vectoriser.fit_transform(data['part_of_speech']),
-                                        text_vectoriser.fit_transform(data['word_vector']),
+
+def save_models(train, test, name):
+    # save the models for later use
+    train_name = 'X_train_' + name + '.pickle'
+    test_name = 'X_test_' + name + '.pickle'
+    file = open(train_name, 'wb')
+    pickle.dump(train, file)
+    file.close()
+    file = open(test_name, 'wb')
+    pickle.dump(test, file)
+    file.close()
+
+
+def vectorize(data, text_vectoriser):
+    # doc_vec = text_vectoriser.fit_transform(data['word_vector'])
+    # df = pd.DataFrame(doc_vec.toarray().transpose(), index=text_vectoriser.get_feature_names())
+    # ex = df.iloc[:,0]
+    vectorized_data = sp.sparse.hstack((text_vectoriser.fit_transform(data['word_vector']),
                                         data[['lexicon_analysis', 'polarity_shift_word']].values),
                                        format='csr')
     return vectorized_data
 
 
-def transform(data, pos_vectoriser, text_vectoriser):
-    vectorized_data = sp.sparse.hstack((pos_vectoriser.transform(data['part_of_speech']),
-                                        text_vectoriser.transform(data['word_vector']),
+def transform(data, text_vectoriser):
+    vectorized_data = sp.sparse.hstack((text_vectoriser.transform(data['word_vector']),
                                         data[['lexicon_analysis', 'polarity_shift_word']].values),
                                        format='csr')
     return vectorized_data
@@ -179,8 +190,6 @@ def preprocess(textdata):
     polarity_shift_word = []
     longest = 0
 
-    # Create Lemmatizer and Stemmer.
-    wordLemm = WordNetLemmatizer()
     # Create sentiment instensity analyser
     analyser = SentimentIntensityAnalyzer()
     # Defining regex patterns.
@@ -190,13 +199,15 @@ def preprocess(textdata):
     maxAlphaPattern = "[^a-zA-Z0-9!?.]"
     sequencePattern = r"(.)\1\1+"
     seqReplacePattern = r"\1\1"
+    splitDigitChar = r"([0-9]+(\.[0-9]+)?)"
+    seqDigit = r"[0-9]+"
     i = 0
     for tweet in textdata:
         print("tweet #" + str(i))
 
         score = analyser.polarity_scores(tweet)
         lexicon_analysis.append(score['compound'])
-
+        tweet = tweet.lower()
         # Replace all emojis.
         for emoji in emojis.keys():
             tweet = tweet.replace(emoji, "emoji_" + emojis[emoji])  # "EMOJI" + emojis[emoji])
@@ -206,25 +217,25 @@ def preprocess(textdata):
         tweet = re.sub(userPattern, '', tweet)
         # Replace most non alphabets.
         tweet = re.sub(maxAlphaPattern, " ", tweet)
-        lexicon = []
-
-        # for word in tweet.split():
-        #     if len(word) > 1:
-        #         scores = analyser.polarity_scores(word)
-        #         lexicon.append(scores['compound'])
+        # todo : remove all words of 3 letters or less?
 
         # Replace all non alphabets.
         tweet = re.sub(alphaPattern, " ", tweet)
         # Replace 3 or more consecutive letters by 2 letter.
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
-        tweet = tweet.lower()
+        # separate numbers and letters
+        tweet = re.sub(splitDigitChar, r" \1 ", tweet)
+        # replace numbers with 'number'
+        tweet = re.sub(seqDigit, "number", tweet)
+
 
         polarity = 0
         if 'not' in tweet or 'but' in tweet:
             polarity = 1
 
-        lemmatized, pos = lemmatize_sentence(tweet.split(), wordLemm)
-        processedText.append(lemmatized)
+        # probably going to stem first, then lemmatize. try both and see results?
+        processed, pos = process_sentence(tweet.split())
+        processedText.append(processed)
         part_of_speech.append(pos)
         # lexicon_analysis.append(lexicon)
         polarity_shift_word.append(polarity)
@@ -234,8 +245,11 @@ def preprocess(textdata):
     return part_of_speech, processedText, lexicon_analysis, polarity_shift_word, longest
 
 
-def lemmatize_sentence(tokens, lemmatizer):
-    lemmatized_sentence = []
+def process_sentence(tokens):
+    # Create Lemmatizer and Stemmer.
+    lemmatizer = WordNetLemmatizer()
+    stemmer = PorterStemmer()
+    processed_sentence = []
     partofspeech = []
     for word, tag in pos_tag(tokens):
         if len(word) > 1:
@@ -245,11 +259,21 @@ def lemmatize_sentence(tokens, lemmatizer):
                 pos = 'v'  # verb
             elif tag.startswith('JJ'):
                 pos = 'a'  # adjective
+            elif tag.startswith('RB'):
+                pos = 'r'  # adjverb
             else:
                 pos = 'o'  # other
-            lemmatized_sentence.append(lemmatizer.lemmatize(word))
+
+            if pos in ['n', 'v', 'a', 'r']:
+                word = lemmatizer.lemmatize(word, pos)
+            else:
+                word = lemmatizer.lemmatize(word)
+            # now stem
+            word = stemmer.stem(word)
+            processed_sentence.append(word)
             partofspeech.append(pos)
-    final_text = ' '.join(lemmatized_sentence)
+
+    final_text = ' '.join(processed_sentence)
     final_pos = ' '.join(partofspeech)
     return final_text, final_pos
 
@@ -270,7 +294,7 @@ def get_wordcloud(processedtext):
     plt.savefig('pos_wordcloud.png')
 
 
-def make_graphs(dataset):
+def make_graphs(dataset, X_train, X_test):
     ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
                                                    legend=False)
     ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
@@ -289,6 +313,12 @@ def make_graphs(dataset):
     fd = nltk.FreqDist(all_words)
     fd.plot(25, cumulative=False)
     plt.savefig('common_words.png')
+
+    # dont know if this works...
+    plt.hist(X_train['word_vector'].len(), bins=20, label='train')
+    plt.hist(X_test['word_vector'].len(), bins=20, label='test')
+    plt.legend()
+    plt.savefig('tweet_length.png')
 
 
 if __name__ == '__main__':
