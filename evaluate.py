@@ -110,6 +110,7 @@ def create_models(X_train, y_train, X_test, y_test, data_name):
     print("Logistic Regression")
     LRmodel = runLogReg_Model(X_train, y_train)
     scikit_model_evaluate(LRmodel, "Log Reg", X_test, y_test)
+
     # save the models for later use
     file = open('Sentiment-LR_' + data_name + '.pickle', 'wb')
     pickle.dump(LRmodel, file)

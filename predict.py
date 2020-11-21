@@ -31,8 +31,12 @@ def load_train_data():
     file = open('X_train_TFIDF_with_ngram.pickle', 'rb')
     X_train_TFIDF_with_ngram = pickle.load(file)
     file.close()
+    # Load X_train
+    file = open('wordvec_df_train.pickle', 'rb')
+    wordvec_df_train = pickle.load(file)
+    file.close()
 
-    return X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram
+    return X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram, wordvec_df_train
 
 
 def load_test_data():
@@ -48,8 +52,11 @@ def load_test_data():
     file = open('X_test_TFIDF_with_ngram.pickle', 'rb')
     X_test_TFIDF_with_ngram = pickle.load(file)
     file.close()
+    file = open('wordvec_df_test.pickle', 'rb')
+    wordvec_df_test = pickle.load(file)
+    file.close()
 
-    return X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram
+    return X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram, wordvec_df_test
 
 
 def load_vectorizers():
@@ -98,10 +105,12 @@ def predict(tweet_vectoriser, model, text):
 
 
 if __name__ == "__main__":
+    # load in data
     y_test, y_train = load_Y()
-    X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram = load_test_data()
-    X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram = load_train_data()
+    X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram, wordvec_df_test = load_test_data()
+    X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram, wordvec_df_train = load_train_data()
     tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram = load_vectorizers()
+
     print("=========Running models on Bag of Words data===============")
     evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test, "BoW")
     # Loading the models.
@@ -114,6 +123,10 @@ if __name__ == "__main__":
     evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test, "TFIDF_ngrams")
     # Loading the models.
     BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models("TFIDF_ngrams")
+    print("========Running models on word vector model===============")
+    evaluate.create_models(wordvec_df_train, y_train, wordvec_df_test, y_test, "TFIDF_ngrams")
+    # Loading the models.
+    BNBmodel_TFIDF_word_vec, LRmodel_TFIDF_word_vec = load_models("word_vec")
 
     # Text to classify should be in a list.
     text = ["I hate twitter",

@@ -111,12 +111,17 @@ def read():
     save_models(X_train_TFIDF_with_ngram, X_test_with_ngram, 'TFIDF_with_ngram')
 
     # now word embedded vectors
+    print("Now training word vector model")
     word2vec_model = create_word2vec(df['word_vector'])
     wordvec_arrays = np.zeros((len(processedtext), 200))
     for i in range(len(processedtext)):
         wordvec_arrays[i, :] = create_tweet_vector(processedtext[i], 200, word2vec_model)
     wordvec_df = pd.DataFrame(wordvec_arrays)
-    print("word2vec feature set shape:" + str(wordvec_df.shape))
+
+    wordvec_df_train = wordvec_df.loc[X_train.index]
+    wordvec_df_test = wordvec_df.loc[X_test.index]
+
+    save_models(wordvec_df_train, wordvec_df_test, 'word_vec')
 
     # save the models for later use
     file = open('vectoriser.pickle', 'wb')
@@ -283,7 +288,7 @@ def preprocess(textdata):
         # separate numbers and letters
         tweet = re.sub(splitDigitChar, r" \1 ", tweet)
         # replace numbers with 'number'
-        tweet = re.sub(seqDigit, "number", tweet)
+        # tweet = re.sub(seqDigit, "number", tweet)
         polarity = 0
         if 'not' in tweet or 'but' in tweet:
             polarity = 1
@@ -301,7 +306,8 @@ def preprocess(textdata):
 
 
 def process_sentence(tokens):
-    stopwordlist = set(stopwords.words("english"))
+    # stopwordlist = set(stopwords.words("english"))
+    stopwordlist = ['the', 'of']
     # Create Lemmatizer and Stemmer.
     lemmatizer = WordNetLemmatizer()
     stemmer = PorterStemmer()
