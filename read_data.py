@@ -38,7 +38,7 @@ def read():
     dataset_filename = os.listdir("../project/input")[0]
     dataset_path = os.path.join("../project", "input", dataset_filename)
     print("Open file:", dataset_path)
-    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=999)
+    dataset = pd.read_csv(dataset_path, encoding=DATASET_ENCODING, names=DATASET_COLUMNS, nrows=299)
 
     # Removing the unnecessary columns.
     dataset = dataset[['sentiment', 'text']]
@@ -120,7 +120,7 @@ def read():
     print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
 
     # Plotting the distribution for dataset.
-    make_graphs(dataset, X_train, X_test)
+    make_graphs(processedtext, dataset, X_train, X_test)
     # text analysis
     # get_wordcloud(processedtext)
 
@@ -182,8 +182,6 @@ def preprocess(textdata):
               '<(-_-)>': 'robot', 'd[-_-]b': 'dj', ":'-)": 'sadsmile', ';)': 'wink',
               ';-)': 'wink', 'O:-)': 'angel', 'O*-)': 'angel', '(:-D': 'gossip', '=^.^=': 'cat'}
 
-    # stopwordlist = set(stopwords.words("english"))
-
     processedText = []
     part_of_speech = []
     lexicon_analysis = []
@@ -204,7 +202,6 @@ def preprocess(textdata):
     i = 0
     for tweet in textdata:
         print("tweet #" + str(i))
-
         score = analyser.polarity_scores(tweet)
         lexicon_analysis.append(score['compound'])
         tweet = tweet.lower()
@@ -227,8 +224,6 @@ def preprocess(textdata):
         tweet = re.sub(splitDigitChar, r" \1 ", tweet)
         # replace numbers with 'number'
         tweet = re.sub(seqDigit, "number", tweet)
-
-
         polarity = 0
         if 'not' in tweet or 'but' in tweet:
             polarity = 1
@@ -246,6 +241,7 @@ def preprocess(textdata):
 
 
 def process_sentence(tokens):
+    stopwordlist = set(stopwords.words("english"))
     # Create Lemmatizer and Stemmer.
     lemmatizer = WordNetLemmatizer()
     stemmer = PorterStemmer()
@@ -253,25 +249,26 @@ def process_sentence(tokens):
     partofspeech = []
     for word, tag in pos_tag(tokens):
         if len(word) > 1:
-            if tag.startswith('NN'):
-                pos = 'n'  # noun
-            elif tag.startswith('VB'):
-                pos = 'v'  # verb
-            elif tag.startswith('JJ'):
-                pos = 'a'  # adjective
-            elif tag.startswith('RB'):
-                pos = 'r'  # adjverb
-            else:
-                pos = 'o'  # other
+            if word not in stopwordlist:
+                if tag.startswith('NN'):
+                    pos = 'n'  # noun
+                elif tag.startswith('VB'):
+                    pos = 'v'  # verb
+                elif tag.startswith('JJ'):
+                    pos = 'a'  # adjective
+                elif tag.startswith('RB'):
+                    pos = 'r'  # adjverb
+                else:
+                    pos = 'o'  # other
 
-            if pos in ['n', 'v', 'a', 'r']:
-                word = lemmatizer.lemmatize(word, pos)
-            else:
-                word = lemmatizer.lemmatize(word)
-            # now stem
-            word = stemmer.stem(word)
-            processed_sentence.append(word)
-            partofspeech.append(pos)
+                if pos in ['n', 'v', 'a', 'r']:
+                    word = lemmatizer.lemmatize(word, pos)
+                else:
+                    word = lemmatizer.lemmatize(word)
+                # now stem
+                word = stemmer.stem(word)
+                processed_sentence.append(word)
+                partofspeech.append(pos)
 
     final_text = ' '.join(processed_sentence)
     final_pos = ' '.join(partofspeech)
@@ -294,29 +291,48 @@ def get_wordcloud(processedtext):
     plt.savefig('pos_wordcloud.png')
 
 
-def make_graphs(dataset, X_train, X_test):
+def make_graphs(processedtext, dataset, X_train, X_test):
     ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
                                                    legend=False)
     ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
     # Storing data in lists.
     fig = ax.get_figure()
     fig.savefig('bar_graph.png')
-    all_words = []
-    for line in list(dataset['text']):
-        words = line.split()
-        for word in words:
-            all_words.append(word.lower())
+    pos_words = []
+    neg_words = []
+    for i in range(dataset.shape[0]):
+        words = processedtext[i].split()
+        if dataset["sentiment"][i] == 1:
+            for word in words:
+                pos_words.append(word.lower())
+        else:
+            for word in words:
+                neg_words.append(word.lower())
 
+    all_words = pos_words + neg_words
     plt.figure(figsize=(12, 5))
     plt.title('Top 25 most common words')
     plt.xticks(fontsize=13, rotation=90)
     fd = nltk.FreqDist(all_words)
     fd.plot(25, cumulative=False)
-    plt.savefig('common_words.png')
+    plt.savefig('common_words_all.png')
 
-    # dont know if this works...
-    plt.hist(X_train['word_vector'].len(), bins=20, label='train')
-    plt.hist(X_test['word_vector'].len(), bins=20, label='test')
+    plt.figure(figsize=(12, 5))
+    plt.title('Top 25 most common words in positive tweets')
+    plt.xticks(fontsize=13, rotation=90)
+    fd = nltk.FreqDist(pos_words)
+    fd.plot(25, cumulative=False)
+    plt.savefig('common_words_pos.png')
+
+    plt.figure(figsize=(12, 5))
+    plt.title('Top 25 most common words in negative tweets')
+    plt.xticks(fontsize=13, rotation=90)
+    fd = nltk.FreqDist(neg_words)
+    fd.plot(25, cumulative=False)
+    plt.savefig('common_words_neg.png')
+
+    plt.hist(X_train['word_vector'].str.len(), bins=20, label='train')
+    plt.hist(X_test['word_vector'].str.len(), bins=20, label='test')
     plt.legend()
     plt.savefig('tweet_length.png')
 
