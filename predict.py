@@ -18,29 +18,58 @@ def load_models():
     return BNBmodel, LRmodel
 
 
-def load_data(): #TODO
+def load_train_data():
+    # Load X_train
+    file = open('X_train_BoW.pickle', 'rb')
+    X_train_BoW = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('X_train_TFIDF_no_ngram.pickle', 'rb')
+    X_train_TFIDF_no_ngram = pickle.load(file)
+    file.close()
+    # Load X_train
+    file = open('X_train_TFIDF_with_ngram.pickle', 'rb')
+    X_train_TFIDF_with_ngram = pickle.load(file)
+    file.close()
+
+    return X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram
+
+
+def load_test_data():
+    # Load X_test
+    file = open('X_test_BoW.pickle', 'rb')
+    X_test_BoW = pickle.load(file)
+    file.close()
+    # Load X_test
+    file = open('X_test_TFIDF_no_ngram.pickle', 'rb')
+    X_test_TFIDF_no_ngram = pickle.load(file)
+    file.close()
+    # Load X_test
+    file = open('X_test_TFIDF_with_ngram.pickle', 'rb')
+    X_test_TFIDF_with_ngram = pickle.load(file)
+    file.close()
+
+    return X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram
+
+
+def load_vectorizers():
     # Load the vectoriser.
     file = open('vectoriser.pickle', 'rb')
-    vectoriser = pickle.load(file)
+    vectorisers = pickle.load(file)
     file.close()
-    # Load X_train
-    file = open('X_train.pickle', 'rb')
-    X_train = pickle.load(file)
-    file.close()
-    # Load X_train
-    file = open('X_test.pickle', 'rb')
-    X_test = pickle.load(file)
-    file.close()
-    # Load X_train
-    file = open('y_train.pickle', 'rb')
-    y_train = pickle.load(file)
-    file.close()
-    # Load X_train
+
+    return vectorisers[0], vectorisers[1], vectorisers[2]
+
+def load_Y():
+    # Load the vectoriser.
     file = open('y_test.pickle', 'rb')
     y_test = pickle.load(file)
     file.close()
+    file = open('y_train.pickle', 'rb')
+    y_train = pickle.load(file)
+    file.close()
 
-    return X_train, y_train, X_test, y_test, vectoriser
+    return y_test, y_train
 
 
 def predict(tweet_vectoriser, model, text):
@@ -68,22 +97,31 @@ def predict(tweet_vectoriser, model, text):
 
 
 if __name__ == "__main__":
-    X_train, y_train, X_test, y_test, vectorizers = load_data()
-    tweet_vectoriser_Bow = vectorizers[0]
-    tweet_vectoriser_TFIDF_no_ngram = vectorizers[1]
-    tweet_vectoriser_TFIDF_with_ngram = vectorizers[2]
-    evaluate.create_models(X_train, y_train, X_test, y_test)
+    y_test, y_train = load_Y()
+    X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram = load_test_data()
+    X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram = load_train_data()
+    tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram = load_vectorizers()
+    print("Running models on Bag of Words data")
+    evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test)
     # Loading the models.
-    BNBmodel, LRmodel = load_models()
+    BNBmodel_BoW, LRmodel_BoW = load_models()
+    print("Running models on TFIDF data")
+    evaluate.create_models(X_train_TFIDF_no_ngram, y_train, X_test_TFIDF_no_ngram, y_test)
+    # Loading the models.
+    BNBmodel_TFIDF_no, LRmodel_TFIDF_no = load_models()
+    print("Running models on TFIDF data with ngrams")
+    evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test)
+    # Loading the models.
+    BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models()
 
     # Text to classify should be in a list.
     text = ["I hate twitter",
             "May the Force be with you.",
             "Mr. Stark, I don't feel so good"]
 
-    df = predict(tweet_vectoriser_Bow, LRmodel, text)
+    df = predict(tweet_vectoriser_Bow, LRmodel_BoW, text)
     print("=========LR model=========")
     print(df.head())
-    df = predict(tweet_vectoriser_Bow, BNBmodel, text)
+    df = predict(tweet_vectoriser_Bow, BNBmodel_BoW, text)
     print("=========BNB model========")
     print(df.head())
