@@ -93,6 +93,10 @@ def read():
 
     print(f'Bag of Words Vectoriser fitted.')
     print('No. of feature_words: ', len(tweet_vectoriser_Bow.get_feature_names()) + 2)
+    print(f'TFIDF Vectoriser fitted.')
+    print('No. of feature_words: ', len(X_train_TFIDF_no_ngram.get_feature_names()) + 2)
+    print(f'TFIDF_ngrams Vectoriser fitted.')
+    print('No. of feature_words: ', len(X_train_TFIDF_with_ngram.get_feature_names()) + 2)
 
     # transform tes data set
     X_test_BoW = transform(X_test, tweet_vectoriser_Bow)

@@ -102,15 +102,15 @@ if __name__ == "__main__":
     X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram = load_test_data()
     X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram = load_train_data()
     tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram = load_vectorizers()
-    print("Running models on Bag of Words data")
+    print("=========Running models on Bag of Words data===============")
     evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test, "Bow")
     # Loading the models.
     BNBmodel_BoW, LRmodel_BoW = load_models("BoW")
-    print("Running models on TFIDF data")
+    print("=========Running models on TFIDF data======================")
     evaluate.create_models(X_train_TFIDF_no_ngram, y_train, X_test_TFIDF_no_ngram, y_test, "TFIDF_no_ngrams")
     # Loading the models.
     BNBmodel_TFIDF_no, LRmodel_TFIDF_no = load_models("TFIDF_no_ngrams")
-    print("Running models on TFIDF data with ngrams")
+    print("========Running models on TFIDF data with ngrams===========")
     evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test, "TFIDF_ngrams")
     # Loading the models.
     BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models("TFIDF_ngrams")
