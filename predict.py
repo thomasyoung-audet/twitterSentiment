@@ -5,13 +5,13 @@ import read_data
 import evaluate
 
 
-def load_models():
+def load_models(name):
     # Load the Naive Bayes model.
-    file = open('Sentiment-BNB.pickle', 'rb')
+    file = open('Sentiment-BNB_' + name + '.pickle', 'rb')
     BNBmodel = pickle.load(file)
     file.close()
     # Load the LR Model.
-    file = open('Sentiment-LR.pickle', 'rb')
+    file = open('Sentiment-LR_' + name + '.pickle', 'rb')
     LRmodel = pickle.load(file)
     file.close()
 
@@ -60,6 +60,7 @@ def load_vectorizers():
 
     return vectorisers[0], vectorisers[1], vectorisers[2]
 
+
 def load_Y():
     # Load the vectoriser.
     file = open('y_test.pickle', 'rb')
@@ -102,17 +103,17 @@ if __name__ == "__main__":
     X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram = load_train_data()
     tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram = load_vectorizers()
     print("Running models on Bag of Words data")
-    evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test)
+    evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test, "Bow")
     # Loading the models.
-    BNBmodel_BoW, LRmodel_BoW = load_models()
+    BNBmodel_BoW, LRmodel_BoW = load_models("BoW")
     print("Running models on TFIDF data")
-    evaluate.create_models(X_train_TFIDF_no_ngram, y_train, X_test_TFIDF_no_ngram, y_test)
+    evaluate.create_models(X_train_TFIDF_no_ngram, y_train, X_test_TFIDF_no_ngram, y_test, "TFIDF_no_ngrams")
     # Loading the models.
-    BNBmodel_TFIDF_no, LRmodel_TFIDF_no = load_models()
+    BNBmodel_TFIDF_no, LRmodel_TFIDF_no = load_models("TFIDF_no_ngrams")
     print("Running models on TFIDF data with ngrams")
-    evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test)
+    evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test, "TFIDF_ngrams")
     # Loading the models.
-    BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models()
+    BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models("TFIDF_ngrams")
 
     # Text to classify should be in a list.
     text = ["I hate twitter",

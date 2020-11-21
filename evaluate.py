@@ -100,7 +100,7 @@ def runLogReg_Model(X_train, y_train):
 #     return model
 
 
-def create_models(X_train, y_train, X_test, y_test):
+def create_models(X_train, y_train, X_test, y_test, data_name):
     print("Naive Bayes")
     BNBmodel = runBernouliNB_Model(X_train, y_train)
     scikit_model_evaluate(BNBmodel, "Bernouli", X_test, y_test)
@@ -111,14 +111,14 @@ def create_models(X_train, y_train, X_test, y_test):
     LRmodel = runLogReg_Model(X_train, y_train)
     scikit_model_evaluate(LRmodel, "Log Reg", X_test, y_test)
     # save the models for later use
-    file = open('Sentiment-LR.pickle', 'wb')
+    file = open('Sentiment-LR_' + data_name + '.pickle', 'wb')
     pickle.dump(LRmodel, file)
     file.close()
 
-    file = open('Sentiment-BNB.pickle', 'wb')
+    file = open('Sentiment-BNB_' + data_name + '.pickle', 'wb')
     pickle.dump(BNBmodel, file)
     file.close()
 
-    file = open('Sentiment-SVC.pickle', 'wb')
+    file = open('Sentiment-SVC_' + data_name + '.pickle', 'wb')
     pickle.dump(SVCmodel, file)
     file.close()

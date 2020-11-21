@@ -122,7 +122,7 @@ def read():
     # Plotting the distribution for dataset.
     make_graphs(processedtext, dataset, X_train, X_test)
     # text analysis
-    # get_wordcloud(processedtext)
+    get_wordcloud(processedtext)
 
 
 def save_models(train, test, name):
