@@ -103,7 +103,7 @@ if __name__ == "__main__":
     X_train_BoW, X_train_TFIDF_no_ngram, X_train_TFIDF_with_ngram = load_train_data()
     tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram = load_vectorizers()
     print("=========Running models on Bag of Words data===============")
-    evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test, "Bow")
+    evaluate.create_models(X_train_BoW, y_train, X_test_BoW, y_test, "BoW")
     # Loading the models.
     BNBmodel_BoW, LRmodel_BoW = load_models("BoW")
     print("=========Running models on TFIDF data======================")

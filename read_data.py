@@ -4,6 +4,8 @@ import os
 import pandas as pd
 import time
 import pickle
+import scipy as sp
+import numpy as np
 # plotting
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -18,10 +20,11 @@ from nltk.corpus import stopwords
 from nltk.tag import pos_tag
 from nltk.corpus import sentiwordnet as swn
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-import scipy as sp
+
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+import gensim
 
 
 def read():
@@ -94,9 +97,9 @@ def read():
     print(f'Bag of Words Vectoriser fitted.')
     print('No. of feature_words: ', len(tweet_vectoriser_Bow.get_feature_names()) + 2)
     print(f'TFIDF Vectoriser fitted.')
-    print('No. of feature_words: ', len(X_train_TFIDF_no_ngram.get_feature_names()) + 2)
+    print('No. of feature_words: ', len(tweet_vectoriser_TFIDF_no_ngram.get_feature_names()) + 2)
     print(f'TFIDF_ngrams Vectoriser fitted.')
-    print('No. of feature_words: ', len(X_train_TFIDF_with_ngram.get_feature_names()) + 2)
+    print('No. of feature_words: ', len(tweet_vectoriser_TFIDF_with_ngram.get_feature_names()) + 2)
 
     # transform tes data set
     X_test_BoW = transform(X_test, tweet_vectoriser_Bow)
@@ -106,6 +109,14 @@ def read():
     save_models(X_train_BoW, X_test_BoW, 'BoW')
     save_models(X_train_TFIDF_no_ngram, X_test_TFIDF_no_ngram, 'TFIDF_no_ngram')
     save_models(X_train_TFIDF_with_ngram, X_test_with_ngram, 'TFIDF_with_ngram')
+
+    # now word embedded vectors
+    word2vec_model = create_word2vec(df['word_vector'])
+    wordvec_arrays = np.zeros((len(processedtext), 200))
+    for i in range(len(processedtext)):
+        wordvec_arrays[i, :] = create_tweet_vector(processedtext[i], 200, word2vec_model)
+    wordvec_df = pd.DataFrame(wordvec_arrays)
+    print("word2vec feature set shape:" + str(wordvec_df.shape))
 
     # save the models for later use
     file = open('vectoriser.pickle', 'wb')
@@ -124,9 +135,9 @@ def read():
     print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
 
     # Plotting the distribution for dataset.
-    make_graphs(processedtext, dataset, X_train, X_test)
+    # make_graphs(processedtext, dataset, X_train, X_test)
     # text analysis
-    get_wordcloud(processedtext)
+    # get_wordcloud(processedtext)
 
 
 def save_models(train, test, name):
@@ -156,6 +167,51 @@ def transform(data, text_vectoriser):
                                         data[['lexicon_analysis', 'polarity_shift_word']].values),
                                        format='csr')
     return vectorized_data
+
+
+def create_word2vec(preprocessed):
+    """https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec"""
+    tokenized_tweet = preprocessed.apply(lambda x: x.split())  # tokenizing
+
+    model_w2v = gensim.models.Word2Vec(
+        tokenized_tweet,
+        size=200,  # desired no. of features/independent variables
+        window=5,  # context window size
+        min_count=2,  # Ignores all words with total frequency lower than 2.
+        sg=1,  # 1 for skip-gram model
+        hs=0,
+        negative=10,  # for negative sampling
+        workers=32,  # no.of cores
+        seed=34
+    )
+
+    model_w2v.train(tokenized_tweet, total_examples=len(preprocessed), epochs=20)
+    return model_w2v
+
+
+def create_tweet_vector(tokens, size, model_w2v):
+    """
+    Since our data contains tweets and not just words, we’ll have to figure out a way to use the word vectors from
+    word2vec model to create vector representation for an entire tweet. There is a simple solution to this problem,
+    we can simply take mean of all the word vectors present in the tweet. The length of the resultant vector will be
+    the same, i.e. 200. We will repeat the same process for all the tweets in our data and obtain their vectors.
+    Now we have 200 word2vec features for our data.
+
+    We will use the below function to create a vector for each tweet by taking the average of the vectors of the
+    words present in the tweet.
+    :return:
+    """
+    vec = np.zeros(size).reshape((1, size))
+    count = 0
+    for word in tokens:
+        try:
+            vec += model_w2v[word].reshape((1, size))
+            count += 1.
+        except KeyError:  # handling the case where the token is not in vocabulary
+            continue
+    if count != 0:
+        vec /= count
+    return vec
 
 
 def preprocess(textdata):
@@ -334,7 +390,7 @@ def make_graphs(processedtext, dataset, X_train, X_test):
     fd = nltk.FreqDist(neg_words)
     fd.plot(25, cumulative=False)
     plt.savefig('common_words_neg.png')
-
+    plt.clf()  # clear figure
     plt.hist(X_train['word_vector'].str.len(), bins=20, label='train')
     plt.hist(X_test['word_vector'].str.len(), bins=20, label='test')
     plt.legend()
