@@ -112,16 +112,16 @@ def read():
 
     # now word embedded vectors
     print("Now training word vector model")
-    word2vec_model = create_word2vec(df['word_vector'])
-    wordvec_arrays = np.zeros((len(processedtext), 200))
+    new_model, word2vec_model = create_word2vec(df['word_vector'])
+    wordvec_arrays = np.zeros((len(processedtext), 202))
     for i in range(len(processedtext)):
-        wordvec_arrays[i, :] = create_tweet_vector(processedtext[i], 200, word2vec_model)
+        wordvec_arrays[i, :] = create_tweet_vector(processedtext[i].split(), 202, new_model, word2vec_model)
     wordvec_df = pd.DataFrame(wordvec_arrays)
 
     wordvec_df_train = wordvec_df.loc[X_train.index]
     wordvec_df_test = wordvec_df.loc[X_test.index]
 
-    save_models(wordvec_df_train, wordvec_df_test, 'word_vec')
+    # save_models(wordvec_df_train, wordvec_df_test, 'word_vec')
 
     # save the models for later use
     file = open('vectoriser.pickle', 'wb')
@@ -177,9 +177,14 @@ def transform(data, text_vectoriser):
 def create_word2vec(preprocessed):
     """https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec"""
     tokenized_tweet = preprocessed.apply(lambda x: x.split())  # tokenizing
+    analyser = SentimentIntensityAnalyzer()
+    # here is my idea:
+    # Do a vader polarity analysis on every word
+    # turn every word into word_pos. this way they would have the pos embedded int it.
+    # at some point when you are on the vectorization phase, get rid of the _pos part and concat with the
+    # score? maybe calculate the score now once its been stripped.
 
     model_w2v = gensim.models.Word2Vec(
-        tokenized_tweet,
         size=200,  # desired no. of features/independent variables
         window=5,  # context window size
         min_count=2,  # Ignores all words with total frequency lower than 2.
@@ -189,12 +194,32 @@ def create_word2vec(preprocessed):
         workers=32,  # no.of cores
         seed=34
     )
+    model_w2v.build_vocab(tokenized_tweet, progress_per=10000)
 
     model_w2v.train(tokenized_tweet, total_examples=len(preprocessed), epochs=20)
-    return model_w2v
+    # test code to see dataframe
+    ordered_vocab = [(term, voc.index, voc.count) for term, voc in model_w2v.wv.vocab.items()]
+    ordered_vocab = sorted(ordered_vocab, key=lambda k: k[2])
+    ordered_terms, term_indices, term_counts = zip(*ordered_vocab)
+    word_vectors = pd.DataFrame(model_w2v.wv.syn0[term_indices, :], index=ordered_terms)
+    scores = []
+    pol_shift_list = []
+    for word in word_vectors.index:
+        # calculate score..maybe get rid of the embedded POS
+        score = analyser.polarity_scores(word)
+        scores.append(score['compound'])
+        # see if its not or but
+        pol_shift = 0
+        if word == 'not' or word == 'but':
+            pol_shift = 1
+        pol_shift_list.append(pol_shift)
+    word_vectors['scores'] = scores
+    word_vectors['pol_shift'] = pol_shift_list
+
+    return word_vectors, model_w2v
 
 
-def create_tweet_vector(tokens, size, model_w2v):
+def create_tweet_vector(tokens, size, model_w2v, old_model):
     """
     Since our data contains tweets and not just words, we’ll have to figure out a way to use the word vectors from
     word2vec model to create vector representation for an entire tweet. There is a simple solution to this problem,
@@ -210,7 +235,7 @@ def create_tweet_vector(tokens, size, model_w2v):
     count = 0
     for word in tokens:
         try:
-            vec += model_w2v[word].reshape((1, size))
+            vec += model_w2v.loc[word].values.reshape((1, size))
             count += 1.
         except KeyError:  # handling the case where the token is not in vocabulary
             continue
@@ -244,7 +269,7 @@ def preprocess(textdata):
               ':-@': 'shocked', ':@': 'shocked', ':-$': 'confused', ':\\': 'annoyed',
               ':#': 'mute', ':X': 'mute', ':^)': 'smile', ':-&': 'confused', '$_$': 'greedy',
               '@@': 'eyeroll', ':-!': 'confused', ':-D': 'smile', ':-0': 'yell', 'O.o': 'confused',
-              '<(-_-)>': 'robot', 'd[-_-]b': 'dj', ":'-)": 'sadsmile', ';)': 'wink',
+              '<(-_-)>': 'robot', 'd[-_-]b': 'dj', ":'-)": 'sad smile', ';)': 'wink',
               ';-)': 'wink', 'O:-)': 'angel', 'O*-)': 'angel', '(:-D': 'gossip', '=^.^=': 'cat'}
 
     processedText = []
@@ -323,7 +348,7 @@ def process_sentence(tokens):
                 elif tag.startswith('JJ'):
                     pos = 'a'  # adjective
                 elif tag.startswith('RB'):
-                    pos = 'r'  # adjverb
+                    pos = 'r'  # adverb
                 else:
                     pos = 'o'  # other
 
@@ -332,7 +357,7 @@ def process_sentence(tokens):
                 else:
                     word = lemmatizer.lemmatize(word)
                 # now stem
-                word = stemmer.stem(word)
+                # word = stemmer.stem(word)
                 processed_sentence.append(word)
                 partofspeech.append(pos)
 

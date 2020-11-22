@@ -32,7 +32,7 @@ def load_train_data():
     X_train_TFIDF_with_ngram = pickle.load(file)
     file.close()
     # Load X_train
-    file = open('wordvec_df_train.pickle', 'rb')
+    file = open('X_train_word_vec.pickle', 'rb')
     wordvec_df_train = pickle.load(file)
     file.close()
 
@@ -52,7 +52,7 @@ def load_test_data():
     file = open('X_test_TFIDF_with_ngram.pickle', 'rb')
     X_test_TFIDF_with_ngram = pickle.load(file)
     file.close()
-    file = open('wordvec_df_test.pickle', 'rb')
+    file = open('X_test_word_vec.pickle', 'rb')
     wordvec_df_test = pickle.load(file)
     file.close()
 
@@ -104,7 +104,7 @@ def predict(tweet_vectoriser, model, text):
     return df
 
 
-if __name__ == "__main__":
+def run_predictions():
     # load in data
     y_test, y_train = load_Y()
     X_test_BoW, X_test_TFIDF_no_ngram, X_test_TFIDF_with_ngram, wordvec_df_test = load_test_data()
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     evaluate.create_models(X_train_TFIDF_with_ngram, y_train, X_test_TFIDF_with_ngram, y_test, "TFIDF_ngrams")
     # Loading the models.
     BNBmodel_TFIDF_ngram, LRmodel_TFIDF_ngram = load_models("TFIDF_ngrams")
-    print("========Running models on word vector model===============")
+    print("========Running models on word vector model================")
     evaluate.create_models(wordvec_df_train, y_train, wordvec_df_test, y_test, "TFIDF_ngrams")
     # Loading the models.
     BNBmodel_TFIDF_word_vec, LRmodel_TFIDF_word_vec = load_models("word_vec")
@@ -133,9 +133,13 @@ if __name__ == "__main__":
             "May the Force be with you.",
             "Mr. Stark, I don't feel so good"]
 
-    df = predict(tweet_vectoriser_Bow, LRmodel_BoW, text)
+    df = predict(tweet_vectoriser_Bow, LRmodel_TFIDF_word_vec, text)
     print("=========LR model=========")
     print(df.head())
-    df = predict(tweet_vectoriser_Bow, BNBmodel_BoW, text)
+    df = predict(tweet_vectoriser_Bow, BNBmodel_TFIDF_word_vec, text)
     print("=========BNB model========")
     print(df.head())
+
+
+if __name__ == "__main__":
+    run_predictions()
