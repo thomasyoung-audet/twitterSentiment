@@ -31,7 +31,7 @@ def create_data_for_models(redo_preprocessing=True, fit_BoW=True, fit_TFIDF=True
                            create_word_vector_model=False):
     dataset, text, sentiment = read_dataset()
     if redo_preprocessing:
-        preprocess(text)
+        preprocessing_step(text)
     X_train, X_test, y_train, y_test, unsplit_data = create_model_date(sentiment)
     save_label_data(y_train, y_test)
     t = time.time()
@@ -69,7 +69,7 @@ def read_dataset():
     return dataset, text, sentiment
 
 
-def preprocess(text):
+def preprocessing_step(text):
     """
     Some of this is inspired from Nikit Periwal at
     https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
