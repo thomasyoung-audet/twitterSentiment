@@ -27,16 +27,33 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import gensim
 
 
-def read():
-    """
-    Some of this is inspired from Nikit Periwal at
-    https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
-    :return:
-    """
+def create_data_for_models(redo_preprocessing=True, fit_BoW=True, fit_TFIDF=True, fit_better_TFIDF=True,
+                           create_word_vector_model=False):
+    dataset, text, sentiment = read_dataset()
+    if redo_preprocessing:
+        preprocess(text)
+    X_train, X_test, y_train, y_test, unsplit_data = create_model_date(sentiment)
+    save_label_data(y_train, y_test)
     t = time.time()
+    if fit_BoW:
+        fit_BoW_vectorizer(X_train, X_test)
+    if fit_TFIDF:
+        fit_TFIDF_vectorizer(X_train, X_test)
+    if fit_better_TFIDF:
+        fit_TFIDF_ngram_vectorizer(X_train, X_test)
+    if create_word_vector_model:
+        fit_word_vector_model(X_train, X_test, unsplit_data)
+    print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
+
+    # Plotting the distribution for dataset.
+    make_graphs(dataset, X_train, X_test)
+    # text analysis
+    get_wordcloud()
+
+
+def read_dataset():
     DATASET_COLUMNS = ["sentiment", "ids", "date", "flag", "user", "text"]
     DATASET_ENCODING = "ISO-8859-1"
-    TRAIN_SIZE = 0.8
 
     dataset_filename = os.listdir("../project/input")[0]
     dataset_path = os.path.join("../project", "input", dataset_filename)
@@ -49,66 +66,107 @@ def read():
     dataset['sentiment'] = dataset['sentiment'].replace(4, 1)
     # Storing data in lists.
     text, sentiment = list(dataset['text']), list(dataset['sentiment'])
+    return dataset, text, sentiment
 
-    part_of_speech, processedtext, lexicon_analysis, polarity_shift_word, longest = preprocess(text)
-    # padding
-    # for i in range(len(lexicon_analysis)):
-    #     padding_len = longest - len(lexicon_analysis[i])
-    #     lexicon_analysis[i] = lexicon_analysis[i] + [0.0] * padding_len
-    # # save the models for later use
-    # file = open('processedtext.pickle', 'wb')
-    # file2 = open('polarity_scores.pickle', 'wb')
-    # pickle.dump(processedtext, file)
-    # file.close()
-    # pickle.dump(polarity_scores, file2)
-    # file2.close()
+
+def preprocess(text):
+    """
+    Some of this is inspired from Nikit Periwal at
+    https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
+    :return:
+    """
+    t = time.time()
+    print("Begin text preprocessing")
+    processedtext, lexicon_analysis, polarity_shift_word = preprocess(text)
+    print(f'Text Preprocessing complete. Time Taken: {round(time.time() - t)} seconds')
+    # save the models for later use
+    file = open('processedtext.pickle', 'wb')
+    file2 = open('polarity_shift_word.pickle', 'wb')
+    file3 = open('lexicon_analysis.pickle', 'wb')
+    pickle.dump(processedtext, file)
+    file.close()
+    pickle.dump(polarity_shift_word, file2)
+    file2.close()
+    pickle.dump(lexicon_analysis, file3)
+    file2.close()
+
+
+def create_model_date(sentiment):
+    TRAIN_SIZE = 0.8
     # Load
-    # file = open('processedtext.pickle', 'rb')
-    # processedtext = pickle.load(file)
-    # file.close()
-    # file = open('polarity_scores.pickle', 'rb')
-    # polarity_scores = pickle.load(file)
-    # file.close()
-    print(f'Text Preprocessing complete.')
-
-    data = {'part_of_speech': part_of_speech,
-            'word_vector': processedtext,
+    file = open('processedtext.pickle', 'rb')
+    processedtext = pickle.load(file)
+    file.close()
+    file = open('polarity_shift_word.pickle', 'rb')
+    polarity_shift_word = pickle.load(file)
+    file.close()
+    file = open('lexicon_analysis.pickle', 'rb')
+    lexicon_analysis = pickle.load(file)
+    file.close()
+    print("Splitting data")
+    data = {'word_vector': processedtext,
             'lexicon_analysis': lexicon_analysis,
             'polarity_shift_word': polarity_shift_word,
             }
-
-    df = pd.DataFrame(data, columns=['part_of_speech', 'word_vector', 'lexicon_analysis', 'polarity_shift_word'])
+    df = pd.DataFrame(data, columns=['word_vector', 'lexicon_analysis', 'polarity_shift_word'])
 
     # split the data
     X_train, X_test, y_train, y_test = train_test_split(df, sentiment, test_size=1 - TRAIN_SIZE, random_state=0)
 
     print("TRAIN size:", len(X_train))
     print("TEST size:", len(X_test))
+    return X_train, X_test, y_train, y_test, df
 
+
+def fit_BoW_vectorizer(X_train, X_test):
+    t = time.time()
     tweet_vectoriser_Bow = CountVectorizer(ngram_range=(1, 1))
-    tweet_vectoriser_TFIDF_no_ngram = TfidfVectorizer(ngram_range=(1, 1))
-    tweet_vectoriser_TFIDF_with_ngram = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
-    pos_vectoriser = CountVectorizer(token_pattern=r"(?u)\b\w+\b")
-
     X_train_BoW = vectorize(X_train, tweet_vectoriser_Bow)
-    X_train_TFIDF_no_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_no_ngram)
-    X_train_TFIDF_with_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_with_ngram)
-
     print(f'Bag of Words Vectoriser fitted.')
     print('No. of feature_words: ', len(tweet_vectoriser_Bow.get_feature_names()) + 2)
+    X_test_BoW = transform(X_test, tweet_vectoriser_Bow)
+    save_models(X_train_BoW, X_test_BoW, 'BoW')
+    file = open('BoW_vectoriser.pickle', 'wb')
+    pickle.dump(tweet_vectoriser_Bow, file)
+    file.close()
+    print(f'Bag of Words vectoriser fitted. Time Taken: {round(time.time() - t)} seconds')
+
+
+def fit_TFIDF_vectorizer(X_train, X_test):
+    t = time.time()
+    tweet_vectoriser_TFIDF_no_ngram = TfidfVectorizer(ngram_range=(1, 1))
+    X_train_TFIDF_no_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_no_ngram)
     print(f'TFIDF Vectoriser fitted.')
     print('No. of feature_words: ', len(tweet_vectoriser_TFIDF_no_ngram.get_feature_names()) + 2)
+    X_test_TFIDF_no_ngram = transform(X_test, tweet_vectoriser_TFIDF_no_ngram)
+    save_models(X_train_TFIDF_no_ngram, X_test_TFIDF_no_ngram, 'TFIDF_no_ngram')
+    file = open('TFIDF_no_ngram_vectoriser.pickle', 'wb')
+    pickle.dump(tweet_vectoriser_TFIDF_no_ngram, file)
+    file.close()
+    print(f'TFIDF vectoriser fitted. Time Taken: {round(time.time() - t)} seconds')
+
+
+def fit_TFIDF_ngram_vectorizer(X_train, X_test):
+    t = time.time()
+    tweet_vectoriser_TFIDF_with_ngram = TfidfVectorizer(ngram_range=(1, 2), max_features=500000)
+    X_train_TFIDF_with_ngram = vectorize(X_train, tweet_vectoriser_TFIDF_with_ngram)
     print(f'TFIDF_ngrams Vectoriser fitted.')
     print('No. of feature_words: ', len(tweet_vectoriser_TFIDF_with_ngram.get_feature_names()) + 2)
-
-    # transform tes data set
-    X_test_BoW = transform(X_test, tweet_vectoriser_Bow)
-    X_test_TFIDF_no_ngram = transform(X_test, tweet_vectoriser_TFIDF_no_ngram)
     X_test_with_ngram = transform(X_test, tweet_vectoriser_TFIDF_with_ngram)
-
-    save_models(X_train_BoW, X_test_BoW, 'BoW')
-    save_models(X_train_TFIDF_no_ngram, X_test_TFIDF_no_ngram, 'TFIDF_no_ngram')
     save_models(X_train_TFIDF_with_ngram, X_test_with_ngram, 'TFIDF_with_ngram')
+    # save the models for later use
+    file = open('TFIDF_ngram_vectoriser.pickle', 'wb')
+    pickle.dump(tweet_vectoriser_TFIDF_with_ngram, file)
+    file.close()
+    print(f'2-ngram TFIDF vectoriser fitted. Time Taken: {round(time.time() - t)} seconds')
+
+
+def fit_word_vector_model(X_train, X_test, df):
+    t = time.time()
+    # Load
+    file = open('processedtext.pickle', 'rb')
+    processedtext = pickle.load(file)
+    file.close()
 
     # now word embedded vectors
     print("Now training word vector model")
@@ -121,14 +179,11 @@ def read():
     wordvec_df_train = wordvec_df.loc[X_train.index]
     wordvec_df_test = wordvec_df.loc[X_test.index]
 
-    # save_models(wordvec_df_train, wordvec_df_test, 'word_vec')
+    save_models(wordvec_df_train, wordvec_df_test, 'word_vec')
+    print(f'Word vector model fitted. Time Taken: {round(time.time() - t)} seconds')
 
-    # save the models for later use
-    file = open('vectoriser.pickle', 'wb')
-    vectorisers = [tweet_vectoriser_Bow, tweet_vectoriser_TFIDF_no_ngram, tweet_vectoriser_TFIDF_with_ngram]
-    pickle.dump(vectorisers, file)
-    file.close()
 
+def save_label_data(y_train, y_test):
     file = open('y_train.pickle', 'wb')
     pickle.dump(y_train, file)
     file.close()
@@ -136,13 +191,6 @@ def read():
     file = open('y_test.pickle', 'wb')
     pickle.dump(y_test, file)
     file.close()
-
-    print(f'Dataset processing complete. Time Taken: {round(time.time() - t)} seconds')
-
-    # Plotting the distribution for dataset.
-    # make_graphs(processedtext, dataset, X_train, X_test)
-    # text analysis
-    # get_wordcloud(processedtext)
 
 
 def save_models(train, test, name):
@@ -276,7 +324,6 @@ def preprocess(textdata):
     part_of_speech = []
     lexicon_analysis = []
     polarity_shift_word = []
-    longest = 0
 
     # Create sentiment instensity analyser
     analyser = SentimentIntensityAnalyzer()
@@ -288,10 +335,10 @@ def preprocess(textdata):
     sequencePattern = r"(.)\1\1+"
     seqReplacePattern = r"\1\1"
     splitDigitChar = r"([0-9]+(\.[0-9]+)?)"
-    seqDigit = r"[0-9]+"
     i = 0
     for tweet in textdata:
-        print("tweet #" + str(i))
+        if i % 100 == 0:
+            print("tweet #" + str(i))
         score = analyser.polarity_scores(tweet)
         lexicon_analysis.append(score['compound'])
         tweet = tweet.lower()
@@ -304,16 +351,13 @@ def preprocess(textdata):
         tweet = re.sub(userPattern, '', tweet)
         # Replace most non alphabets.
         tweet = re.sub(maxAlphaPattern, " ", tweet)
-        # todo : remove all words of 3 letters or less?
-
         # Replace all non alphabets.
         tweet = re.sub(alphaPattern, " ", tweet)
         # Replace 3 or more consecutive letters by 2 letter.
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
         # separate numbers and letters
         tweet = re.sub(splitDigitChar, r" \1 ", tweet)
-        # replace numbers with 'number'
-        # tweet = re.sub(seqDigit, "number", tweet)
+
         polarity = 0
         if 'not' in tweet or 'but' in tweet:
             polarity = 1
@@ -322,12 +366,9 @@ def preprocess(textdata):
         processed, pos = process_sentence(tweet.split())
         processedText.append(processed)
         part_of_speech.append(pos)
-        # lexicon_analysis.append(lexicon)
         polarity_shift_word.append(polarity)
-        if len(tweet.split()) > longest:
-            longest = len(tweet.split())
         i += 1
-    return part_of_speech, processedText, lexicon_analysis, polarity_shift_word, longest
+    return processedText, lexicon_analysis, polarity_shift_word
 
 
 def process_sentence(tokens):
@@ -366,7 +407,11 @@ def process_sentence(tokens):
     return final_text, final_pos
 
 
-def get_wordcloud(processedtext):
+def get_wordcloud():
+    # Load
+    file = open('processedtext.pickle', 'rb')
+    processedtext = pickle.load(file)
+    file.close()
     data_neg = processedtext[:800000]
     plt.figure(figsize=(20, 20))
     wc = WordCloud(max_words=1000, width=1600, height=800,
@@ -382,7 +427,12 @@ def get_wordcloud(processedtext):
     plt.savefig('pos_wordcloud.png')
 
 
-def make_graphs(processedtext, dataset, X_train, X_test):
+def make_graphs(dataset, X_train, X_test):
+    # Load
+    file = open('processedtext.pickle', 'rb')
+    processedtext = pickle.load(file)
+    file.close()
+
     ax = dataset.groupby('sentiment').count().plot(kind='bar', title='Distribution of data',
                                                    legend=False)
     ax.set_xticklabels(['Negative', 'Positive'], rotation=0)
@@ -429,4 +479,5 @@ def make_graphs(processedtext, dataset, X_train, X_test):
 
 
 if __name__ == '__main__':
-    read()
+    create_data_for_models(redo_preprocessing=True, fit_BoW=False, fit_TFIDF=False, fit_better_TFIDF=True,
+                           create_word_vector_model=False)

@@ -22,7 +22,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 # from keras.layers import SimpleRNN, Dense, Activation, Embedding, LSTM, SpatialDropout1D
 
 
-def scikit_model_evaluate(model, name, X_test, y_test):
+def model_evaluate(model, name, X_test, y_test):
     # Predict values for Test dataset
     y_pred = model.predict(X_test)
 
@@ -73,17 +73,6 @@ def runLogReg_Model(X_train, y_train):
     return LRmodel
 
 
-# def runRNN_Model(X_train, y_train, X_test, y_test):
-#     rnn = Sequential()
-#     rnn.add(Embedding(num_words, 16, input_length=(maxlen)))  # 32
-#     rnn.add(SimpleRNN(16, input_shape=(num_words, maxlen), return_sequences=False, activation="tanh"))
-#     rnn.add(Dense(1))
-#     rnn.add(Activation("sigmoid"))
-#
-#     print(rnn.summary())
-#     rnn.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])  # rmsprop
-#     history = rnn.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=128, verbose=1)
-
 # def runLSTM_Model(X_train, y_train):
 #     embed_dim = 128
 #     lstm_out = 196
@@ -103,13 +92,13 @@ def runLogReg_Model(X_train, y_train):
 def create_models(X_train, y_train, X_test, y_test, data_name):
     print("Naive Bayes")
     BNBmodel = runBernouliNB_Model(X_train, y_train)
-    scikit_model_evaluate(BNBmodel, "Bernouli", X_test, y_test)
+    model_evaluate(BNBmodel, "Bernouli", X_test, y_test)
     print("SVC")
     SVCmodel = runLinearSVC_Model(X_train, y_train)
-    scikit_model_evaluate(SVCmodel, "SVC", X_test, y_test)
+    model_evaluate(SVCmodel, "SVC", X_test, y_test)
     print("Logistic Regression")
     LRmodel = runLogReg_Model(X_train, y_train)
-    scikit_model_evaluate(LRmodel, "Log Reg", X_test, y_test)
+    model_evaluate(LRmodel, "Log Reg", X_test, y_test)
 
     # save the models for later use
     file = open('Sentiment-LR_' + data_name + '.pickle', 'wb')
