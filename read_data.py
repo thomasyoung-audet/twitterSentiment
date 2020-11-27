@@ -32,7 +32,7 @@ def create_data_for_models(redo_preprocessing=True, fit_BoW=True, fit_TFIDF=True
     dataset, text, sentiment = read_dataset()
     if redo_preprocessing:
         preprocessing_step(text)
-    X_train, X_test, y_train, y_test, unsplit_data = create_model_date(sentiment)
+    X_train, X_test, y_train, y_test, unsplit_data = create_model_data(sentiment)
     save_label_data(y_train, y_test)
     t = time.time()
     if fit_BoW:
@@ -91,7 +91,7 @@ def preprocessing_step(text):
     file2.close()
 
 
-def create_model_date(sentiment):
+def create_model_data(sentiment):
     TRAIN_SIZE = 0.8
     # Load
     file = open('processedtext.pickle', 'rb')
@@ -240,7 +240,8 @@ def create_word2vec(preprocessed):
         hs=0,
         negative=10,  # for negative sampling
         workers=32,  # no.of cores
-        seed=34
+        seed=34,
+        iter=10  # no. of epochs
     )
     model_w2v.build_vocab(tokenized_tweet, progress_per=10000)
 

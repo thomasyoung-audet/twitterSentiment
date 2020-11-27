@@ -12,15 +12,15 @@ def fit_and_evaluate_models(BoW, TFIDF, ngramTFIDF, wordvec):
         evaluate.create_models(X_train, y_train, X_test, y_test, "BoW")
     if TFIDF:
         y_test, y_train, X_test, X_train, vectorizer = load_in_data(False, TFIDF)
-        print("=========Running models on Bag of Words data===============")
+        print("=========Running models on TFIDF data===============")
         evaluate.create_models(X_train, y_train, X_test, y_test, "TFIDF_no_ngram")
     if ngramTFIDF:
         y_test, y_train, X_test, X_train, vectorizer = load_in_data(False, False, ngramTFIDF)
-        print("=========Running models on Bag of Words data===============")
+        print("=========Running models on 2-ngram TFIDF data===============")
         evaluate.create_models(X_train, y_train, X_test, y_test, "TFIDF_ngram")
     if wordvec:
         y_test, y_train, X_test, X_train, vectorizer = load_in_data(False, False, False, wordvec)
-        print("=========Running models on Bag of Words data===============")
+        print("=========Running models on Word Vector data===============")
         evaluate.create_models(X_train, y_train, X_test, y_test, "word_vec")
 
 
@@ -96,6 +96,10 @@ def predict(data_preprocess_type, model, text):
     ml_model = load_models(model, data_preprocess_type)
     # load the method with which we preprocess the text
     tweet_vectoriser = load_vectorizers(data_preprocess_type)
+
+
+
+
     # Predict the sentiment
     processedtext, lexicon_analysis, polarity_shift_word = read_data.preprocess(text)
     data = {'word_vector': processedtext,
@@ -104,6 +108,8 @@ def predict(data_preprocess_type, model, text):
             }
 
     df = pd.DataFrame(data, columns=['word_vector', 'lexicon_analysis', 'polarity_shift_word'])
+
+    # I think here for the wordvec model, just create a vector for the tweet out of the already create word model
     textdata = read_data.transform(df, tweet_vectoriser)
     sentiment = ml_model.predict(textdata)
 
