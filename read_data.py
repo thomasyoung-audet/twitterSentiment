@@ -173,7 +173,7 @@ def fit_word_vector_model(X_train, X_test, df):
     new_model, word2vec_model = create_word2vec(df['word_vector'])
     wordvec_arrays = np.zeros((len(processedtext), 202))
     for i in range(len(processedtext)):
-        wordvec_arrays[i, :] = create_tweet_vector(processedtext[i].split(), 202, new_model, word2vec_model)
+        wordvec_arrays[i, :] = create_tweet_vector(processedtext[i].split(), 202, new_model)
     wordvec_df = pd.DataFrame(wordvec_arrays)
 
     wordvec_df_train = wordvec_df.loc[X_train.index]
@@ -226,11 +226,6 @@ def create_word2vec(preprocessed):
     """https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec"""
     tokenized_tweet = preprocessed.apply(lambda x: x.split())  # tokenizing
     analyser = SentimentIntensityAnalyzer()
-    # here is my idea:
-    # Do a vader polarity analysis on every word
-    # turn every word into word_pos. this way they would have the pos embedded int it.
-    # at some point when you are on the vectorization phase, get rid of the _pos part and concat with the
-    # score? maybe calculate the score now once its been stripped.
 
     model_w2v = gensim.models.Word2Vec(
         size=200,  # desired no. of features/independent variables
@@ -254,7 +249,6 @@ def create_word2vec(preprocessed):
     scores = []
     pol_shift_list = []
     for word in word_vectors.index:
-        # calculate score..maybe get rid of the embedded POS
         score = analyser.polarity_scores(word)
         scores.append(score['compound'])
         # see if its not or but
@@ -268,8 +262,9 @@ def create_word2vec(preprocessed):
     return word_vectors, model_w2v
 
 
-def create_tweet_vector(tokens, size, model_w2v, old_model):
+def create_tweet_vector(tokens, size, model_w2v):
     """
+    SOURCE: https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec
     Since our data contains tweets and not just words, we’ll have to figure out a way to use the word vectors from
     word2vec model to create vector representation for an entire tweet. There is a simple solution to this problem,
     we can simply take mean of all the word vectors present in the tweet. The length of the resultant vector will be
