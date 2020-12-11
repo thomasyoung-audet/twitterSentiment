@@ -17,6 +17,10 @@ from sklearn.metrics import confusion_matrix, classification_report
 
 
 def model_evaluate(model, name, X_test, y_test):
+    """
+    Some of the code in this function was written by Nikit Periwal at:
+    https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
+    """
     # Predict values for Test dataset
     y_pred = model.predict(X_test)
 
@@ -61,7 +65,7 @@ def runLinearSVC_Model(X_train, y_train):
 
 def runLogReg_Model(X_train, y_train):
     t = time.time()
-    LRmodel = LogisticRegression(C=2, max_iter=1000, n_jobs=-1)
+    LRmodel = LogisticRegression(C=2, max_iter=10000, n_jobs=-1)
     LRmodel.fit(X_train, y_train)
     print(f'Logistic Regression fit complete. Time Taken: {round(time.time() - t)} seconds')
     return LRmodel

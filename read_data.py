@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from nltk.stem import WordNetLemmatizer
 from nltk import PorterStemmer
 import nltk
-
 nltk.download('stopwords')
 nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import stopwords
