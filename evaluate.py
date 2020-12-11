@@ -15,12 +15,6 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, classification_report
 
-# keras
-# from keras.preprocessing.sequence import pad_sequences
-# from keras.models import Sequential
-# from keras.layers.embeddings import Embedding
-# from keras.layers import SimpleRNN, Dense, Activation, Embedding, LSTM, SpatialDropout1D
-
 
 def model_evaluate(model, name, X_test, y_test):
     # Predict values for Test dataset
@@ -71,22 +65,6 @@ def runLogReg_Model(X_train, y_train):
     LRmodel.fit(X_train, y_train)
     print(f'Logistic Regression fit complete. Time Taken: {round(time.time() - t)} seconds')
     return LRmodel
-
-
-# def runLSTM_Model(X_train, y_train):
-#     embed_dim = 128
-#     lstm_out = 196
-#     max_fatures = 2000
-#     model = Sequential()
-#     model.add(Embedding(max_fatures, embed_dim, input_length=X.shape[1]))
-#     model.add(SpatialDropout1D(0.4))
-#     model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
-#     model.add(Dense(2, activation='softmax'))
-#     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-#     print(model.summary())
-#     batch_size = 32
-#     model.fit(X_train, y_train, epochs=7, batch_size=batch_size, verbose=2)  # up epoch number
-#     return model
 
 
 def create_models(X_train, y_train, X_test, y_test, data_name):

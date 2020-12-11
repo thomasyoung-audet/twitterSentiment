@@ -14,11 +14,11 @@ import matplotlib.pyplot as plt
 from nltk.stem import WordNetLemmatizer
 from nltk import PorterStemmer
 import nltk
-# nltk.download('stopwords')
-# nltk.download('averaged_perceptron_tagger')
+
+nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import stopwords
 from nltk.tag import pos_tag
-from nltk.corpus import sentiwordnet as swn
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from sklearn.model_selection import train_test_split
@@ -28,10 +28,12 @@ import gensim
 
 
 def create_data_for_models(redo_preprocessing=True, fit_BoW=True, fit_TFIDF=True, fit_better_TFIDF=True,
-                           create_word_vector_model=False):
+                           create_word_vector_model=False, preprocessing_params=None):
+    if preprocessing_params is None:
+        preprocessing_params = [False, False]
     dataset, text, sentiment = read_dataset()
     if redo_preprocessing:
-        preprocessing_step(text)
+        preprocessing_step(text, preprocessing_params)
     X_train, X_test, y_train, y_test, unsplit_data = create_model_data(sentiment)
     save_label_data(y_train, y_test)
     t = time.time()
@@ -69,7 +71,7 @@ def read_dataset():
     return dataset, text, sentiment
 
 
-def preprocessing_step(text):
+def preprocessing_step(text, preprocessing_params):
     """
     Some of this is inspired from Nikit Periwal at
     https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
@@ -77,7 +79,7 @@ def preprocessing_step(text):
     """
     t = time.time()
     print("Begin text preprocessing")
-    processedtext, lexicon_analysis, polarity_shift_word = preprocess(text)
+    processedtext, lexicon_analysis, polarity_shift_word = preprocess(text, preprocessing_params)
     print(f'Text Preprocessing complete. Time Taken: {round(time.time() - t)} seconds')
     # save the models for later use
     file = open('processedtext.pickle', 'wb')
@@ -206,9 +208,6 @@ def save_models(train, test, name):
 
 
 def vectorize(data, text_vectoriser):
-    # doc_vec = text_vectoriser.fit_transform(data['word_vector'])
-    # df = pd.DataFrame(doc_vec.toarray().transpose(), index=text_vectoriser.get_feature_names())
-    # ex = df.iloc[:,0]
     vectorized_data = sp.sparse.hstack((text_vectoriser.fit_transform(data['word_vector']),
                                         data[['lexicon_analysis', 'polarity_shift_word']].values),
                                        format='csr')
@@ -223,7 +222,10 @@ def transform(data, text_vectoriser):
 
 
 def create_word2vec(preprocessed):
-    """https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec"""
+    """Part of this code was written by Nitin Garg at:
+    https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec
+
+    Training our own word vectors"""
     tokenized_tweet = preprocessed.apply(lambda x: x.split())  # tokenizing
     analyser = SentimentIntensityAnalyzer()
 
@@ -241,7 +243,7 @@ def create_word2vec(preprocessed):
     model_w2v.build_vocab(tokenized_tweet, progress_per=10000)
 
     model_w2v.train(tokenized_tweet, total_examples=len(preprocessed), epochs=20)
-    # test code to see dataframe
+    # code to see dataframe
     ordered_vocab = [(term, voc.index, voc.count) for term, voc in model_w2v.wv.vocab.items()]
     ordered_vocab = sorted(ordered_vocab, key=lambda k: k[2])
     ordered_terms, term_indices, term_counts = zip(*ordered_vocab)
@@ -264,16 +266,16 @@ def create_word2vec(preprocessed):
 
 def create_tweet_vector(tokens, size, model_w2v):
     """
-    SOURCE: https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec
-    Since our data contains tweets and not just words, we’ll have to figure out a way to use the word vectors from
+    Part of this code was written by Nitin Garg at:
+    https://www.kaggle.com/nitin194/twitter-sentiment-analysis-word2vec-doc2vec
+    "Since our data contains tweets and not just words, we’ll have to figure out a way to use the word vectors from
     word2vec model to create vector representation for an entire tweet. There is a simple solution to this problem,
     we can simply take mean of all the word vectors present in the tweet. The length of the resultant vector will be
     the same, i.e. 200. We will repeat the same process for all the tweets in our data and obtain their vectors.
     Now we have 200 word2vec features for our data.
 
     We will use the below function to create a vector for each tweet by taking the average of the vectors of the
-    words present in the tweet.
-    :return:
+    words present in the tweet."
     """
     vec = np.zeros(size).reshape((1, size))
     count = 0
@@ -288,10 +290,11 @@ def create_tweet_vector(tokens, size, model_w2v):
     return vec
 
 
-def preprocess(textdata):
+def preprocess(textdata, preprocessing_params):
     """
-    CREDIT Nikit Periwal https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
-    :param textdata:
+    Some of the code in this function was written by Nikit Periwal at:
+    https://www.kaggle.com/stoicstatic/twitter-sentiment-analysis-for-beginners#Analysing-the-data
+
     The Preprocessing steps taken are:
 
     Lower Casing: Each text is converted to lowercase.
@@ -299,8 +302,10 @@ def preprocess(textdata):
     Replacing Emojis: Replace emojis by using a pre-defined dictionary containing emojis along with their meaning.
     (eg: ":)" to "smile")
     Removing Usernames: Replace @Usernames with nothing.
+    Removing Numbers: All numbers are replaced with
     Removing Non-Alphabets: Replacing characters except Digits and Alphabets with a space.
     Removing Consecutive letters: 3 or more consecutive letters are replaced by 2 letters. (eg: "Heyyyy" to "Heyy")
+    Separating numbers and letters, replace all number with the word "number" (eg: "9am" to "number am")
     Removing Short Words: Words with length less than 2 are removed.
     Removing Stopwords: Stopwords are the English words which does not add much meaning to a sentence. They can safely
     be ignored without sacrificing the meaning of the sentence. (eg: "the", "he", "have")
@@ -343,7 +348,7 @@ def preprocess(textdata):
             tweet = tweet.replace(emoji, "emoji_" + emojis[emoji])  # "EMOJI" + emojis[emoji])
         # Replace all URls with 'URL'
         tweet = re.sub(urlPattern, ' URL', tweet)
-        # Replace @USERNAME to 'USER'. Actually just remove it.
+        # Remove @USERNAME.
         tweet = re.sub(userPattern, '', tweet)
         # Replace most non alphabets.
         tweet = re.sub(maxAlphaPattern, " ", tweet)
@@ -351,15 +356,15 @@ def preprocess(textdata):
         tweet = re.sub(alphaPattern, " ", tweet)
         # Replace 3 or more consecutive letters by 2 letter.
         tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
-        # separate numbers and letters
-        tweet = re.sub(splitDigitChar, r" \1 ", tweet)
+        # separate numbers and letters, replace all number with the word "number"
+        tweet = re.sub(splitDigitChar, r" number ", tweet)
 
         polarity = 0
         if 'not' in tweet or 'but' in tweet:
             polarity = 1
 
-        # probably going to stem first, then lemmatize. try both and see results?
-        processed, pos = process_sentence(tweet.split())
+        # lemmatizing and stemming
+        processed, pos = process_sentence(tweet.split(), preprocessing_params)
         processedText.append(processed)
         part_of_speech.append(pos)
         polarity_shift_word.append(polarity)
@@ -367,9 +372,11 @@ def preprocess(textdata):
     return processedText, lexicon_analysis, polarity_shift_word
 
 
-def process_sentence(tokens):
-    # stopwordlist = set(stopwords.words("english"))
-    stopwordlist = ['the', 'of']
+def process_sentence(tokens, preprocessing_params):
+    if preprocessing_params[1]:
+        stopwordlist = set(stopwords.words("english"))
+    else:
+        stopwordlist = []
     # Create Lemmatizer and Stemmer.
     lemmatizer = WordNetLemmatizer()
     stemmer = PorterStemmer()
@@ -394,7 +401,8 @@ def process_sentence(tokens):
                 else:
                     word = lemmatizer.lemmatize(word)
                 # now stem
-                # word = stemmer.stem(word)
+                if preprocessing_params[0]:
+                    word = stemmer.stem(word)
                 processed_sentence.append(word)
                 partofspeech.append(pos)
 

@@ -38,8 +38,8 @@ def load_in_data(BoW=False, TFIDF=False, ngramTFIDF=False, wordvec=False):
         tweet_vectoriser_TFIDF_no_ngram = load_vectorizers('TFIDF_no_ngram')
         return y_test, y_train, X_test_TFIDF_no_ngram, X_train_TFIDF_no_ngram, tweet_vectoriser_TFIDF_no_ngram
     if ngramTFIDF:
-        X_test_TFIDF_with_ngram= load_test_data('TFIDF_with_ngram')
-        X_train_TFIDF_with_ngram= load_train_data('TFIDF_with_ngram')
+        X_test_TFIDF_with_ngram = load_test_data('TFIDF_with_ngram')
+        X_train_TFIDF_with_ngram = load_train_data('TFIDF_with_ngram')
         tweet_vectoriser_TFIDF_with_ngram = load_vectorizers('TFIDF_ngram')
         return y_test, y_train, X_test_TFIDF_with_ngram, X_train_TFIDF_with_ngram, tweet_vectoriser_TFIDF_with_ngram
     if wordvec:
@@ -80,7 +80,7 @@ def load_vectorizers(name):
 
 
 def load_Y():
-    # Load the vectoriser.
+    # Load the label data.
     file = open('y_test.pickle', 'rb')
     y_test = pickle.load(file)
     file.close()
@@ -91,25 +91,21 @@ def load_Y():
     return y_test, y_train
 
 
-def predict(data_preprocess_type, model, text):
+def predict(data_preprocess_type, model, text, preprocessing_params):
     # load in the model we want to use to predict the sentiment
     ml_model = load_models(model, data_preprocess_type)
     # load the method with which we preprocess the text
     tweet_vectoriser = load_vectorizers(data_preprocess_type)
 
-
-
-
-    # Predict the sentiment
-    processedtext, lexicon_analysis, polarity_shift_word = read_data.preprocess(text)
+    # preprocess the text to predict
+    processedtext, lexicon_analysis, polarity_shift_word = read_data.preprocess(text, preprocessing_params)
     data = {'word_vector': processedtext,
             'lexicon_analysis': lexicon_analysis,
             'polarity_shift_word': polarity_shift_word,
             }
 
     df = pd.DataFrame(data, columns=['word_vector', 'lexicon_analysis', 'polarity_shift_word'])
-
-    # I think here for the wordvec model, just create a vector for the tweet out of the already create word model
+    # Predict the sentiment
     textdata = read_data.transform(df, tweet_vectoriser)
     sentiment = ml_model.predict(textdata)
 
@@ -124,8 +120,7 @@ def predict(data_preprocess_type, model, text):
     return df
 
 
-def predict_text_sentiment(vectorizer, model, text):
-
-    df = predict(vectorizer, model, text)
+def predict_text_sentiment(vectorizer, model, text, preprocessing_params):
+    df = predict(vectorizer, model, text, preprocessing_params)
     print("=========" + model + " prediction =========")
     print(df.head())
