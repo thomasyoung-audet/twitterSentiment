@@ -23,3 +23,4 @@ In it I use 3 models: LinearSVC, BernoulliNB and LogisticRegression
  ways you can prepare data for these models and how well each of these preparations 
  performs. 
 
+Warning: it takes a long time to run, make sure you start it before making dinner or something.
