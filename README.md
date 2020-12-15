@@ -3,14 +3,15 @@ Sentiment analysis of tweet dataset using the sentiment140 dataset from kaggle.
 https://www.kaggle.com/kazanova/sentiment140
 
 file structure required for the project:
-
-input/  
-|- dataset.csv  
-controller.py  
-evaluate.py  
-predict.py  
-read_data.py  
-
+```
+project/  
+  | input/  
+  |   | dataset.csv  
+  | controller.py  
+  | evaluate.py  
+  | predict.py  
+  | read_data.py  
+```
 
 To run the code:
 ```python3 controller.py```
