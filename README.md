@@ -4,17 +4,12 @@ https://www.kaggle.com/kazanova/sentiment140
 
 file structure required for the project:
 
-input/
-
-|- dataset.csv
-
-controller.py
-
-evaluate.py
-
-predict.py
-
-read_data.py
+input/  
+|- dataset.csv  
+controller.py  
+evaluate.py  
+predict.py  
+read_data.py  
 
 
 To run the code:
